@@ -30,13 +30,6 @@ typedef double   f64;
 
 // General Defines ////////////////////////////////////////////////////////////
 
-#define PI 3.14159265359
-#define TWOPI 6.283185307179586476925286766559
-#define TWOPIF 6.283185307179586476925286766559f
-
-#define MAX(a,b) ((a) > (b) ? a : b)
-#define MIN(a,b) ((a) < (b) ? a : b)
-
 #define FMODERRCHECK(_result) FMODERRCHECK_fn(_result, __FILE__, __LINE__)
 void FMODERRCHECK_fn(FMOD_RESULT result, const char *file, s32 line)
 {
@@ -55,6 +48,10 @@ void FMODSOUNDERRCHECK_fn(FMOD_RESULT result, const char *file, s32 line)
 }
 
 // Static data ////////////////////////////////////////////////////////////////
+
+constexpr double PI = 3.14159265359;
+constexpr double TWOPI = 6.283185307179586476925286766559;
+constexpr float TWOPIF = 6.283185307179586476925286766559f;
 
 // The frequencies for all MIDI notes
 static f32 imp_note_freqs[] = {
@@ -335,15 +332,81 @@ struct imp_synth {
     imp_vibrato vibrato;
 };
 
+template<typename T>
+class CircularRWBuffer {
+    public:
+        enum ReadError {
+            BufferEmpty
+        };
+
+        enum WriteError {
+            BufferFull
+        };
+
+        enum State {
+            Empty,
+            Normal,
+            Full
+        };
+
+        void write (T data) {
+            if (state == Full) {
+                throw BufferFull;
+            }
+
+            *(buffer + w_ptr_offset) = data;
+
+            if (++w_ptr_offset >= BUFSIZE) {
+                w_ptr_offset = 0;
+            }
+
+            if (w_ptr_offset == r_ptr_offset) {
+                state = Full;
+            } else {
+                state = Normal;
+            }
+        }
+
+        T read () {
+          if (state == Empty) {
+            throw BufferEmpty;
+          }
+
+          T result = *(buffer + r_ptr_offset);
+
+          if (++r_ptr_offset >= BUFSIZE) {
+              r_ptr_offset = 0;
+          }
+
+          if (r_ptr_offset == w_ptr_offset) {
+            state = Empty;
+          } else {
+            state = Normal;
+          }
+
+          return result;
+        }
+
+        State getState () {
+          return state;
+        }
+
+    private:
+        static constexpr size_t BUFSIZE = 128;
+
+        T buffer[BUFSIZE] = { 0 };
+        size_t r_ptr_offset = 0;
+        size_t w_ptr_offset = 0;
+        State state = Empty;
+};
+
 struct imp_instrument_instance {
     bool active;
     imp_synth *synth;
     imp_scale scale;
     u8 scale_root;
-    u8* events;
-    u8* r_ptr;
-    u8* w_ptr;
     f64 e_countdown;
+    CircularRWBuffer<u8> queue;
 };
 
 enum IMP_RESULT : u8 {
@@ -383,20 +446,29 @@ struct imp_song {
 
 // Imp defines ////////////////////////////////////////////////////////////////
 
-#define IMP_SAMPLE_FREQ 44100.0f
-#define IMP_INV_SAMPLE_FREQ 0.000022675736961451248f
+constexpr float IMP_SAMPLE_FREQ = 44100.0f;
+constexpr float IMP_INV_SAMPLE_FREQ = 0.000022675736961451248f;
 
-#define IMP_WAVETABLE_SIZE 32
+constexpr size_t IMP_WAVETABLE_SIZE = 32;
 
-#define IMP_FILTER_SIZE 32
-#define IMP_MAX_FILTER_INDEX 31
+constexpr size_t IMP_FILTER_SIZE = 32;
+constexpr size_t IMP_MAX_FILTER_INDEX = 31;
 
-#define IMP_NUM_VOICES 32
-#define IMP_NUM_SYNTHS 16
-#define IMP_NUM_INSTRUMENT_INSTANCES 64
-#define IMP_EVENT_QUEUE_SIZE 128
+constexpr size_t IMP_NUM_VOICES = 32;
+constexpr size_t IMP_NUM_SYNTHS = 16;
+constexpr size_t IMP_NUM_INSTRUMENT_INSTANCES = 64;
 
 // Helper functions ///////////////////////////////////////////////////////////
+
+template <typename T>
+inline bool max(T a, T b) {
+    return a > b ? a : b;
+}
+
+template <typename T>
+inline bool min(T a, T b) {
+    return a < b ? a : b;
+}
 
 inline void imp_wavetable_from_harmonics(f32 *wavetable, f32 *harmonics, u32 N) {
     // Precompute harmonics normalization factor n
@@ -477,30 +549,29 @@ inline u8 imp_scale_rand(imp_scale scale, u8 scale_root) {
 }
 
 inline uint32_t min_u32(uint32_t a, uint32_t b) {
-  return a < b ? a : b;
+    return a < b ? a : b;
 }
 
 inline float imp_lerp(float a, float b, float t) {
-  return (1 - t) * a + t * b; // precise lerp
+    return (1 - t) * a + t * b; // precise lerp
 }
 
 inline float imp_lerp_array(float *values, unsigned int size, float t) {
-  float ixf = t * size;
-  int ix = (int)ixf;
-  unsigned int max_ix = size - 1;
-  return imp_lerp(
-    values[min_u32(ix, max_ix)],
-    values[min_u32(ix + 1, max_ix)],
-    ixf - ix
-  );
+    float ixf = t * size;
+    int ix = (int)ixf;
+    unsigned int max_ix = size - 1;
+    return imp_lerp(
+        values[min_u32(ix, max_ix)],
+        values[min_u32(ix + 1, max_ix)],
+        ixf - ix
+    );
 }
 
 inline float imp_lerp_array_circular(float *values, unsigned int size, float t) {
-  float ixf = t * size;
-  int ix = ((int)ixf) % size;
-  return imp_lerp(values[ix], values[(ix + 1) % size], ixf - ix);
+    float ixf = t * size;
+    int ix = ((int)ixf) % size;
+    return imp_lerp(values[ix], values[(ix + 1) % size], ixf - ix);
 }
-
 
 // Application ////////////////////////////////////////////////////////////////
 
@@ -539,12 +610,9 @@ FMOD_RESULT F_CALLBACK pcmreadcallback(FMOD_SOUND* sound, void* data, u32 datale
 
             // Handle events
             while (instrument_instance->e_countdown <= 0) {
-                u8 event = *instrument_instance->r_ptr++;
-                // TODO get rid of this wrap event, use a circular buffer
-                if (event == IMP_EVENT_TYPE_WRAP) {
-                    instrument_instance->r_ptr = instrument_instance->events;
-                    u8* pe = instrument_instance->events;
+                auto& events = instrument_instance->queue;
 
+                if (events.getState() == CircularRWBuffer<u8>::State::Empty) {
                     // Generate future events from plan
                     {
                         // s32 gen_ix = rand(); // select generator
@@ -564,17 +632,17 @@ FMOD_RESULT F_CALLBACK pcmreadcallback(FMOD_SOUND* sound, void* data, u32 datale
                                 for (u32 j = 0; j < subdiv2; ++j) {
                                     if (rand() % 4) {
                                         note = move_func(scale, scale_root, note);
-                                        *pe++ = IMP_EVENT_TYPE_STRIKE;
-                                        *pe++ = note;
-                                        *pe++ = IMP_EVENT_TYPE_WAIT;
-                                        *pe++ = 1;
-                                        *pe++ = subdiv * subdiv2;
-                                        *pe++ = IMP_EVENT_TYPE_RELEASE;
-                                        *pe++ = note;
+                                        events.write(IMP_EVENT_TYPE_STRIKE);
+                                        events.write(note);
+                                        events.write(IMP_EVENT_TYPE_WAIT);
+                                        events.write(1);
+                                        events.write(subdiv * subdiv2);
+                                        events.write(IMP_EVENT_TYPE_RELEASE);
+                                        events.write(note);
                                     } else {
-                                        *pe++ = IMP_EVENT_TYPE_WAIT;
-                                        *pe++ = 1;
-                                        *pe++ = subdiv * subdiv2;
+                                        events.write(IMP_EVENT_TYPE_WAIT);
+                                        events.write(1);
+                                        events.write(subdiv * subdiv2);
                                     }
                                 }
                             } else {
@@ -582,19 +650,23 @@ FMOD_RESULT F_CALLBACK pcmreadcallback(FMOD_SOUND* sound, void* data, u32 datale
                                     (IMP_NOTE)imp_scale_rand(scale, scale_root),
                                     (IMP_OCTAVE)(IMP_OCTAVE_MINUS_1 + rand() % 2)
                                 );
-                                *pe++ = IMP_EVENT_TYPE_STRIKE;
-                                *pe++ = note;
-                                *pe++ = IMP_EVENT_TYPE_WAIT;
-                                *pe++ = 1;
-                                *pe++ = subdiv;
-                                *pe++ = IMP_EVENT_TYPE_RELEASE;
-                                *pe++ = note;
+                                events.write(IMP_EVENT_TYPE_STRIKE);
+                                events.write(note);
+                                events.write(IMP_EVENT_TYPE_WAIT);
+                                events.write(1);
+                                events.write(subdiv);
+                                events.write(IMP_EVENT_TYPE_RELEASE);
+                                events.write(note);
                             }
                         }
-                        *pe = IMP_EVENT_TYPE_WRAP;
+                        events.write(IMP_EVENT_TYPE_WRAP);
                     }
-                } else if (event == IMP_EVENT_TYPE_STRIKE) {
-                    u8 note = *instrument_instance->r_ptr++;
+                }
+
+                u8 event = events.read();
+
+                if (event == IMP_EVENT_TYPE_STRIKE) {
+                    u8 note = events.read();
                     f32 freq = imp_note_freqs[note];
                     imp_voice *found = 0;
                     for (u32 i = 0; i < IMP_NUM_VOICES; ++i) {
@@ -613,7 +685,7 @@ FMOD_RESULT F_CALLBACK pcmreadcallback(FMOD_SOUND* sound, void* data, u32 datale
                         found->state = IMP_VOICE_STATE_ATTACK;
                     }
                 } else if (event == IMP_EVENT_TYPE_RELEASE) {
-                    f32 freq = imp_note_freqs[*instrument_instance->r_ptr++];
+                    f32 freq = imp_note_freqs[events.read()];
                     for (u32 i = 0; i < IMP_NUM_VOICES; ++i) {
                         imp_voice* voice = &synth->voices[i];
 
@@ -640,8 +712,8 @@ FMOD_RESULT F_CALLBACK pcmreadcallback(FMOD_SOUND* sound, void* data, u32 datale
                         }
                     }
                 } else if (event == IMP_EVENT_TYPE_WAIT) {
-                    u8 wait = *instrument_instance->r_ptr++;
-                    u8 div = *instrument_instance->r_ptr++;
+                    u8 wait = events.read();
+                    u8 div = events.read();
                     f32 beats_wait = wait * 4.0f / div;
                     instrument_instance->e_countdown = 60 * beats_wait / song->bpm;
                 }
@@ -714,16 +786,16 @@ FMOD_RESULT F_CALLBACK pcmreadcallback(FMOD_SOUND* sound, void* data, u32 datale
         song->time += dt;
         song->absolute_time += IMP_INV_SAMPLE_FREQ;
 
-        f32 time_lerp_start_time = 1;
-        f32 time_lerp_duration = 10;
-        if (song->absolute_time > time_lerp_start_time) {
-            f32 t = (song->absolute_time - time_lerp_start_time) / time_lerp_duration;
-            if (t > 1) {
-              t = 1;
-            }
-            f32 ct = -cos(t * PI) * 0.5f + 0.5f;
-            song->time_scale = 1 - ct;
-        }
+        // f32 time_lerp_start_time = 1;
+        // f32 time_lerp_duration = 10;
+        // if (song->absolute_time > time_lerp_start_time) {
+        //     f32 t = (song->absolute_time - time_lerp_start_time) / time_lerp_duration;
+        //     if (t > 1) {
+        //       t = 1;
+        //     }
+        //     f32 ct = -cos(t * PI) * 0.5f + 0.5f;
+        //     song->time_scale = 1 - ct;
+        // }
 
         // Clamp amplitude
         if (amplitude_sum >= 1.0f) {
@@ -837,13 +909,10 @@ s32 main()
     harm_min.ixs = harm_min_ixs;
 
     // Setup instrument instances
-    u8 events[IMP_EVENT_QUEUE_SIZE * IMP_NUM_INSTRUMENT_INSTANCES] = { 0 };
     imp_instrument_instance instrument_instances[IMP_NUM_INSTRUMENT_INSTANCES] = { 0 };
     for (s32 i = 0; i != 4; ++i) {
         instrument_instances[i].active = true;
         instrument_instances[i].e_countdown = 0;
-        instrument_instances[i].events = events + i * IMP_EVENT_QUEUE_SIZE;
-        instrument_instances[i].r_ptr = events + i * IMP_EVENT_QUEUE_SIZE;
         instrument_instances[i].synth = &synths[i % IMP_NUM_SYNTHS];
         instrument_instances[i].scale = major;
         instrument_instances[i].scale_root = IMP_NOTE_A;
@@ -904,7 +973,6 @@ s32 main()
 
     std::chrono::time_point<std::chrono::high_resolution_clock, std::chrono::nanoseconds> t, t0 = std::chrono::high_resolution_clock::now();
     f32 dt, prev_elapsed, elapsed = 0;
-    u8* r_prev = song.instrument_instances[0].r_ptr;
 
     bool isPlaying = true;
     while (isPlaying && song.time_scale > FLT_EPSILON) {
@@ -914,35 +982,6 @@ s32 main()
             prev_elapsed = elapsed;
             elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(t - t0).count() / 1000.0f;
             dt = elapsed - prev_elapsed;
-
-            // IMP_EVENT_TYPE_WRAP,
-            // IMP_EVENT_TYPE_STRIKE, // note
-            // IMP_EVENT_TYPE_RELEASE, // note
-            // IMP_EVENT_TYPE_WAIT, // wait, subdiv
-            u8* r_ptr = song.instrument_instances[0].r_ptr;
-            if (r_ptr != r_prev) {
-                std::cout << r_ptr - song.instrument_instances[0].events << std::endl;
-                u8 evt = *r_ptr;
-                switch (evt) {
-                    case IMP_EVENT_TYPE_WRAP: {
-                        std::cout << "wrap" << std::endl;
-                        break;
-                    }
-                    case IMP_EVENT_TYPE_STRIKE: {
-                        std::cout << "strike" << std::endl;
-                        break;
-                    }
-                    case IMP_EVENT_TYPE_RELEASE: {
-                        std::cout << "release" << std::endl;
-                        break;
-                    }
-                    case IMP_EVENT_TYPE_WAIT: {
-                        std::cout << "wait" << std::endl;
-                        break;
-                    }
-                }
-            }
-            r_prev = r_ptr;
         }
 
         FMODERRCHECK(system->update());
