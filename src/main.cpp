@@ -250,7 +250,6 @@ enum IMP_NOTE : u8 {
 // };
 
 enum IMP_EVENT_TYPE : u8 {
-    IMP_EVENT_TYPE_WRAP,
     IMP_EVENT_TYPE_STRIKE, // note
     IMP_EVENT_TYPE_RELEASE, // note
     // IMP_EVENT_TYPE_VIBRATO, // amp, period
@@ -266,17 +265,6 @@ enum IMP_VOICE_STATE : u8 {
     IMP_VOICE_STATE_SUSTAIN,
     IMP_VOICE_STATE_RELEASE,
 };
-
-// enum IMP_CHORD_TYPE : u8 {
-//     IMP_CHORD_TYPE_POWER,
-//     IMP_CHORD_TYPE_SUSPENDED_2ND,
-//     IMP_CHORD_TYPE_TRIAD,
-//     IMP_CHORD_TYPE_SUSPENDED_4TH,
-//     IMP_CHORD_TYPE_SEVENTH,
-//     IMP_CHORD_TYPE_NINTH,
-//     IMP_CHORD_TYPE_ELEVENTH,
-//     IMP_CHORD_TYPE_THIRTEENTH,
-// };
 
 // Structs ////////////////////////////////////////////////////////////////////
 
@@ -414,25 +402,6 @@ enum IMP_RESULT : u8 {
     IMP_RESULT_ERR_BUFFER_FULL,
 };
 
-IMP_RESULT imp_circular_buffer_write(u8* buf, u8* buf_end, u8* r_ptr, u8* w_ptr, u8 data) {
-    if (w_ptr == r_ptr) {
-        return IMP_RESULT_ERR_BUFFER_FULL;
-    }
-
-    *w_ptr++ = data;
-
-    if (w_ptr >= buf_end) {
-        w_ptr = buf;
-    }
-
-    return IMP_RESULT_SUCCESS;
-}
-
-struct imp_instrument_score {
-    u8 *partiture;
-    u8 *partiture_ptr;
-};
-
 struct imp_song {
     f32 bpm;
     u8 *form;
@@ -440,8 +409,6 @@ struct imp_song {
     f64 time_scale;
     f64 absolute_time;
     f64 time;
-    imp_instrument_score *score;
-    // u8 **partitures;
 };
 
 // Imp defines ////////////////////////////////////////////////////////////////
@@ -449,7 +416,7 @@ struct imp_song {
 constexpr float IMP_SAMPLE_FREQ = 44100.0f;
 constexpr float IMP_INV_SAMPLE_FREQ = 0.000022675736961451248f;
 
-constexpr size_t IMP_WAVETABLE_SIZE = 32;
+constexpr size_t IMP_WAVETABLE_SIZE = 1024;
 
 constexpr size_t IMP_FILTER_SIZE = 32;
 constexpr size_t IMP_MAX_FILTER_INDEX = 31;
@@ -461,13 +428,37 @@ constexpr size_t IMP_NUM_INSTRUMENT_INSTANCES = 64;
 // Helper functions ///////////////////////////////////////////////////////////
 
 template <typename T>
-inline bool max(T a, T b) {
+inline T max(T a, T b) {
     return a > b ? a : b;
 }
 
 template <typename T>
-inline bool min(T a, T b) {
+inline T min(T a, T b) {
     return a < b ? a : b;
+}
+
+inline float imp_lerp(float a, float b, float t) {
+    return (1 - t) * a + t * b; // precise lerp
+}
+
+inline float imp_lerp_array(float *values, u32 size, float t) {
+    float ixf = t * size;
+    u32 ix = (u32)ixf;
+    u32 max_ix = size - 1;
+    return imp_lerp(
+        values[min(ix, max_ix)],
+        values[min(ix + 1, max_ix)],
+        ixf - ix
+    );
+}
+
+inline float imp_lerp_array_circular(float *values, u32 size, float t) {
+    while (t >= 1) {
+        t -= 1;
+    }
+    float ixf = t * size;
+    u32 ix = ((u32)ixf) % size;
+    return imp_lerp(values[ix], values[(ix + 1) % size], ixf - ix);
 }
 
 inline void imp_wavetable_from_harmonics(f32 *wavetable, f32 *harmonics, u32 N) {
@@ -482,8 +473,25 @@ inline void imp_wavetable_from_harmonics(f32 *wavetable, f32 *harmonics, u32 N) 
     f32 c = TWOPIF / (f32)IMP_WAVETABLE_SIZE;
     for (u32 i = 0; i != IMP_WAVETABLE_SIZE; ++i) {
         for (u32 k = 0; k != N; ++k) {
-            wavetable[i] += n * harmonics[k] * sinf(c * i * (k + 2) * 0.5f);
+            wavetable[i] += n * harmonics[k] * sin(c * i * (k + 1));
         }
+    }
+}
+
+void print_dbg_wavetable(f32* wavetable) {
+    constexpr int height = 80;
+    constexpr int width = 130;
+    for (int k = 0; k != height; ++k) {
+        for (int i = width - 1; i != 0; --i) {
+            float val = 0.5 + 0.5 * imp_lerp_array_circular(wavetable, IMP_WAVETABLE_SIZE, (float)i / (float)(width));
+
+            if (val * height >= k && val * height < k + 1) {
+                std::cout << "x";
+            } else {
+                std::cout << " ";
+            }
+        }
+        std::cout << std::endl;
     }
 }
 
@@ -546,31 +554,6 @@ inline u8 imp_scale_ascend(imp_scale scale, u8 scale_root, u8 origin) {
 
 inline u8 imp_scale_rand(imp_scale scale, u8 scale_root) {
     return (scale_root + scale.ixs[rand() % scale.size]) % 12;
-}
-
-inline uint32_t min_u32(uint32_t a, uint32_t b) {
-    return a < b ? a : b;
-}
-
-inline float imp_lerp(float a, float b, float t) {
-    return (1 - t) * a + t * b; // precise lerp
-}
-
-inline float imp_lerp_array(float *values, unsigned int size, float t) {
-    float ixf = t * size;
-    int ix = (int)ixf;
-    unsigned int max_ix = size - 1;
-    return imp_lerp(
-        values[min_u32(ix, max_ix)],
-        values[min_u32(ix + 1, max_ix)],
-        ixf - ix
-    );
-}
-
-inline float imp_lerp_array_circular(float *values, unsigned int size, float t) {
-    float ixf = t * size;
-    int ix = ((int)ixf) % size;
-    return imp_lerp(values[ix], values[(ix + 1) % size], ixf - ix);
 }
 
 // Application ////////////////////////////////////////////////////////////////
@@ -659,7 +642,6 @@ FMOD_RESULT F_CALLBACK pcmreadcallback(FMOD_SOUND* sound, void* data, u32 datale
                                 events.write(note);
                             }
                         }
-                        events.write(IMP_EVENT_TYPE_WRAP);
                     }
                 }
 
@@ -786,16 +768,16 @@ FMOD_RESULT F_CALLBACK pcmreadcallback(FMOD_SOUND* sound, void* data, u32 datale
         song->time += dt;
         song->absolute_time += IMP_INV_SAMPLE_FREQ;
 
-        // f32 time_lerp_start_time = 1;
-        // f32 time_lerp_duration = 10;
-        // if (song->absolute_time > time_lerp_start_time) {
-        //     f32 t = (song->absolute_time - time_lerp_start_time) / time_lerp_duration;
-        //     if (t > 1) {
-        //       t = 1;
-        //     }
-        //     f32 ct = -cos(t * PI) * 0.5f + 0.5f;
-        //     song->time_scale = 1 - ct;
-        // }
+        f32 time_lerp_start_time = 5;
+        f32 time_lerp_duration = 3;
+        if (song->absolute_time > time_lerp_start_time) {
+            f32 t = (song->absolute_time - time_lerp_start_time) / time_lerp_duration;
+            if (t > 1) {
+              t = 1;
+            }
+            f32 ct = -cos(t * PI) * 0.5f + 0.5f;
+            song->time_scale = 1 - ct;
+        }
 
         // Clamp amplitude
         if (amplitude_sum >= 1.0f) {
@@ -836,10 +818,18 @@ s32 main()
         f32 harmonics[32] = { 0 };
         u32 N = sizeof(harmonics) / sizeof(f32);
         for (u32 i = 0; i != N; ++i) {
-            harmonics[i] = (f32)(rand() % 5) / N;
+            f32 div = (f32)(i + 1);
+            harmonics[i] = (rand() % 5) / (div * div);
         }
-
         imp_wavetable_from_harmonics(random_wavetable, harmonics, N);
+    }
+
+    f32 sine_wavetable[IMP_WAVETABLE_SIZE] = { 0 };
+    {
+        f32 harmonics[1] = { 0 };
+        u32 N = sizeof(harmonics) / sizeof(f32);
+        harmonics[0] = 1;
+        imp_wavetable_from_harmonics(sine_wavetable, harmonics, N);
     }
 
     f32 violin_wavetable[IMP_WAVETABLE_SIZE] = { 0 };
@@ -854,7 +844,7 @@ s32 main()
     f32 release_filter[IMP_FILTER_SIZE] = { 0 };
     {
         // Linear functions for now
-        f32 fsize = (f32)IMP_FILTER_SIZE;
+        f32 fsize = (f32)(IMP_FILTER_SIZE - 1);
         for (s32 i = 0; i != IMP_FILTER_SIZE; ++i) {
             attack_filter[i] = i / fsize;
             decay_filter[i] = 1.0f - (i / fsize);
@@ -866,7 +856,7 @@ s32 main()
     imp_voice voices[IMP_NUM_VOICES * IMP_NUM_SYNTHS] = { 0 };
     for (s32 i = 0; i < IMP_NUM_VOICES * IMP_NUM_SYNTHS; ++i)
     {
-        voices[i].vol = 0.3f;
+        voices[i].vol = 0.25f;
     }
 
     // Setup synths
@@ -875,10 +865,10 @@ s32 main()
         synths[i].voices = voices + i * IMP_NUM_VOICES;
         synths[i].wavetable = violin_wavetable;
         synths[i].adsr.at = 0.068f;
-        synths[i].adsr.dt = 1.814f;
+        synths[i].adsr.dt = 0.814f;
         synths[i].adsr.rt = 0.045f;
         synths[i].adsr.a = 0.7f;
-        synths[i].adsr.s = 0.0f;
+        synths[i].adsr.s = 0.5f;
         synths[i].adsr.af = attack_filter;
         synths[i].adsr.df = decay_filter;
         synths[i].adsr.rf = release_filter;
@@ -914,7 +904,7 @@ s32 main()
         instrument_instances[i].active = true;
         instrument_instances[i].e_countdown = 0;
         instrument_instances[i].synth = &synths[i % IMP_NUM_SYNTHS];
-        instrument_instances[i].scale = major;
+        instrument_instances[i].scale = penta;
         instrument_instances[i].scale_root = IMP_NOTE_A;
     }
 
