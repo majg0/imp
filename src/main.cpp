@@ -49,9 +49,21 @@ void FMODSOUNDERRCHECK_fn(FMOD_RESULT result, const char *file, s32 line)
 
 // Static data ////////////////////////////////////////////////////////////////
 
-constexpr double PI = 3.14159265359;
-constexpr double TWOPI = 6.283185307179586476925286766559;
-constexpr float TWOPIF = 6.283185307179586476925286766559f;
+constexpr f32 IMP_SAMPLE_FREQ = 44100.f;
+constexpr f32 IMP_INV_SAMPLE_FREQ = .000022675736961451248f;
+
+constexpr size_t IMP_WAVETABLE_SIZE = 1024;
+
+constexpr size_t IMP_FILTER_SIZE = 32;
+constexpr size_t IMP_MAX_FILTER_INDEX = 31;
+
+constexpr size_t IMP_NUM_VOICES = 32;
+constexpr size_t IMP_NUM_SYNTHS = 16;
+constexpr size_t IMP_NUM_INSTRUMENT_INSTANCES = 64;
+
+constexpr f64 PI = 3.14159265359;
+constexpr f64 TWOPI = 6.283185307179586476925286766559;
+constexpr f32 TWOPIF = 6.283185307179586476925286766559f;
 
 // The frequencies for all MIDI notes
 static f32 imp_note_freqs[] = {
@@ -88,7 +100,7 @@ static f32 imp_note_freqs[] = {
     46.2493028389542f, // Gb1
     48.9994294977186f, // G1
     51.913087197493f, // Ab1
-    55.0f, // A1
+    55.f, // A1
     58.2704701897611f, // B1
     61.7354126570154f, // B1
     65.4063913251495f, // C2
@@ -100,7 +112,7 @@ static f32 imp_note_freqs[] = {
     92.4986056779085f, // Gb2
     97.9988589954372f, // G2 (4 or 5 string bass, high open G)
     103.826174394986f, // Ab2
-    110.0f, // A2 (Guitar 5th string open)
+    110.f, // A2 (Guitar 5th string open)
     116.540940379522f, // Bb2
     123.470825314031f, // B2
     130.812782650299f, // C3 (6-string bass, high open C)
@@ -112,7 +124,7 @@ static f32 imp_note_freqs[] = {
     184.997211355817f, // Gb3
     195.997717990874f, // G3 (Guitar 3rd string open) (Violin low open G)
     207.652348789972f, // Ab3
-    220.0f, // A3
+    220.f, // A3
     233.081880759045f, // Bb3
     246.941650628062f, // B3 (Guitar 3rd string open)
     261.625565300599f, // C4 (Piano middle C)
@@ -124,7 +136,7 @@ static f32 imp_note_freqs[] = {
     369.994422711634f, // Gb4
     391.995435981749f, // G4
     415.304697579945f, // Ab4
-    440.0f, // A4 (Tuning fork A) (Violin 2nd string open)
+    440.f, // A4 (Tuning fork A) (Violin 2nd string open)
     466.16376151809f, // Bb4
     493.883301256124f, // B4
     523.251130601197f, // C5
@@ -136,7 +148,7 @@ static f32 imp_note_freqs[] = {
     739.988845423269f, // Gb5
     783.990871963499f, // G5
     830.609395159891f, // Ab5
-    880.0f, // A5
+    880.f, // A5
     932.32752303618f, // Bb5
     987.766602512249f, // B5
     1046.50226120239f, // C6
@@ -148,7 +160,7 @@ static f32 imp_note_freqs[] = {
     1479.97769084654f, // Gb6
     1567.981743927f, // G6
     1661.21879031978f, // Ab6
-    1760.0f, // A6
+    1760.f, // A6
     1864.65504607236f, // Bb6
     1975.5332050245f, // B6
     2093.00452240479f, // C7
@@ -160,7 +172,7 @@ static f32 imp_note_freqs[] = {
     2959.95538169308f, // Gb7
     3135.963487854f, // G7
     3322.43758063956f, // Ab7
-    3520.0f, // A7
+    3520.f, // A7
     3729.31009214472f, // Bb7
     3951.066410049f, // B7
     4186.00904480958f, // C8 (Piano upper C)
@@ -272,8 +284,8 @@ struct imp_voice {
     f32 phase;
     f32 freq;
     f32 vol;
-    f32 started;
-    f32 released;
+    f32 start_time;
+    f32 release_time;
     f32 adsr_release_vol;
     IMP_VOICE_STATE state;
 };
@@ -397,33 +409,14 @@ struct imp_instrument_instance {
     CircularRWBuffer<u8> queue;
 };
 
-enum IMP_RESULT : u8 {
-    IMP_RESULT_SUCCESS,
-    IMP_RESULT_ERR_BUFFER_FULL,
-};
-
 struct imp_song {
     f32 bpm;
-    u8 *form;
+    // u8 *form;
     imp_instrument_instance *instrument_instances;
     f64 time_scale;
     f64 absolute_time;
     f64 time;
 };
-
-// Imp defines ////////////////////////////////////////////////////////////////
-
-constexpr float IMP_SAMPLE_FREQ = 44100.0f;
-constexpr float IMP_INV_SAMPLE_FREQ = 0.000022675736961451248f;
-
-constexpr size_t IMP_WAVETABLE_SIZE = 1024;
-
-constexpr size_t IMP_FILTER_SIZE = 32;
-constexpr size_t IMP_MAX_FILTER_INDEX = 31;
-
-constexpr size_t IMP_NUM_VOICES = 32;
-constexpr size_t IMP_NUM_SYNTHS = 16;
-constexpr size_t IMP_NUM_INSTRUMENT_INSTANCES = 64;
 
 // Helper functions ///////////////////////////////////////////////////////////
 
@@ -437,37 +430,41 @@ inline T min(T a, T b) {
     return a < b ? a : b;
 }
 
-inline float imp_lerp(float a, float b, float t) {
-    return (1 - t) * a + t * b; // precise lerp
+inline f32 lerp(f32 a, f32 b, f32 t) {
+    return (1.f - t) * a + t * b; // precise lerp
 }
 
-inline float imp_lerp_array(float *values, u32 size, float t) {
-    float ixf = t * size;
+inline f32 cerp(f32 a, f32 b, f32 t) {
+    return lerp(a, b, .5f - cos(t * PI) * .5f);
+}
+
+inline f32 lerp_array(f32 *values, u32 size, f32 t) {
+    f32 ixf = t * size;
     u32 ix = (u32)ixf;
     u32 max_ix = size - 1;
-    return imp_lerp(
+    return lerp(
         values[min(ix, max_ix)],
         values[min(ix + 1, max_ix)],
         ixf - ix
     );
 }
 
-inline float imp_lerp_array_circular(float *values, u32 size, float t) {
-    while (t >= 1) {
-        t -= 1;
+inline f32 lerp_array_circular(f32 *values, u32 size, f32 t) {
+    while (t >= 1.f) {
+        t -= 1.f;
     }
-    float ixf = t * size;
+    f32 ixf = t * size;
     u32 ix = ((u32)ixf) % size;
-    return imp_lerp(values[ix], values[(ix + 1) % size], ixf - ix);
+    return lerp(values[ix], values[(ix + 1) % size], ixf - ix);
 }
 
-inline void imp_wavetable_from_harmonics(f32 *wavetable, f32 *harmonics, u32 N) {
+inline void wavetable_from_harmonics(f32 *wavetable, f32 *harmonics, u32 N) {
     // Precompute harmonics normalization factor n
-    f32 n = 0;
+    f32 n = 0.f;
     for (u32 k = 0; k != N; ++k) {
         n += harmonics[k];
     }
-    n = 1 / n;
+    n = 1.f / n;
 
     // Fill the wavetable
     f32 c = TWOPIF / (f32)IMP_WAVETABLE_SIZE;
@@ -483,7 +480,7 @@ void print_dbg_wavetable(f32* wavetable) {
     constexpr int width = 130;
     for (int k = 0; k != height; ++k) {
         for (int i = width - 1; i != 0; --i) {
-            float val = 0.5 + 0.5 * imp_lerp_array_circular(wavetable, IMP_WAVETABLE_SIZE, (float)i / (float)(width));
+            f32 val = .5f + .5f * lerp_array_circular(wavetable, IMP_WAVETABLE_SIZE, (f32)i / (f32)(width));
 
             if (val * height >= k && val * height < k + 1) {
                 std::cout << "x";
@@ -528,7 +525,7 @@ inline bool scale_rel_ix(imp_scale scale, u8 scale_root, u8 note, u8 *scale_ix, 
     return false;
 }
 
-inline u8 imp_scale_descend(imp_scale scale, u8 scale_root, u8 origin) {
+inline u8 scale_descend(imp_scale scale, u8 scale_root, u8 origin) {
     u8 root_rel = (origin + 12 - scale_root) % 12;
 
     for (s32 i = scale.size - 1; i >= 0; --i) {
@@ -540,7 +537,7 @@ inline u8 imp_scale_descend(imp_scale scale, u8 scale_root, u8 origin) {
     return origin + scale.ixs[scale.size] - 12 - root_rel; // TODO bound
 }
 
-inline u8 imp_scale_ascend(imp_scale scale, u8 scale_root, u8 origin) {
+inline u8 scale_ascend(imp_scale scale, u8 scale_root, u8 origin) {
     u8 root_rel = (origin + 12 - scale_root) % 12;
 
     for (u32 i = 0; i != scale.size; ++i) {
@@ -552,7 +549,7 @@ inline u8 imp_scale_ascend(imp_scale scale, u8 scale_root, u8 origin) {
     return origin + 12 - root_rel; // TODO bound
 }
 
-inline u8 imp_scale_rand(imp_scale scale, u8 scale_root) {
+inline u8 scale_rand(imp_scale scale, u8 scale_root) {
     return (scale_root + scale.ixs[rand() % scale.size]) % 12;
 }
 
@@ -568,79 +565,76 @@ inline u8 imp_scale_rand(imp_scale scale, u8 scale_root) {
 
 FMOD_RESULT F_CALLBACK pcmreadcallback(FMOD_SOUND* sound, void* data, u32 datalen)
 {
-    imp_song* song;
-    ((FMOD::Sound*)sound)->getUserData((void**)&song);
+    imp_song* song_ptr;
+    ((FMOD::Sound*)sound)->getUserData((void**)&song_ptr);
+    imp_song& song = *song_ptr;
 
     // Fill sound buffer
     s16 *stereo16bitbuffer = (s16*)data;
     for (u32 count = 0; count < (datalen >> 2); count++) // >>2 = 4 bytes per sample (16bit stereo)
     {
         f32 amplitude_sum = 0;
-        f64 dt = IMP_INV_SAMPLE_FREQ * song->time_scale;
+        f64 dt = IMP_INV_SAMPLE_FREQ * song.time_scale;
 
         // update song
 
         for (int instrument_instance_ix = 0; instrument_instance_ix < IMP_NUM_INSTRUMENT_INSTANCES; ++instrument_instance_ix) {
             // Get active instrument instance
-            imp_instrument_instance *instrument_instance = &song->instrument_instances[instrument_instance_ix];
-            if (!instrument_instance->active) {
+            imp_instrument_instance& instrument_instance = song.instrument_instances[instrument_instance_ix];
+            if (!instrument_instance.active) {
                 continue;
             }
 
-            imp_synth *synth = instrument_instance->synth;
-            imp_scale scale = instrument_instance->scale;
-            u8 scale_root = instrument_instance->scale_root;
+            imp_synth& synth = *instrument_instance.synth;
+            imp_scale scale = instrument_instance.scale;
+            u8 scale_root = instrument_instance.scale_root;
 
             // Handle events
-            while (instrument_instance->e_countdown <= 0) {
-                auto& events = instrument_instance->queue;
+            while (instrument_instance.e_countdown <= 0) {
+                auto& events = instrument_instance.queue;
 
                 if (events.getState() == CircularRWBuffer<u8>::State::Empty) {
                     // Generate future events from plan
-                    {
-                        // s32 gen_ix = rand(); // select generator
 
-                        // generator type 0
-                        u32 subdiv = pow(2, rand() % 3); // ∈ { 1, 2, 4 }
-                        u8 note = imp_note(
-                            (IMP_NOTE)imp_scale_rand(scale, scale_root),
-                            (IMP_OCTAVE)(IMP_OCTAVE_MINUS_2 + rand() % 2)
-                        );
-                        for (u32 i = 0; i < subdiv; ++i) {
-                            if (rand() % 2) {
-                                u32 subdiv2 = pow(2, rand() % 3); // ∈ { 1, 2, 4 }
-                                u8 (*move_func)(imp_scale, u8, u8) = rand() % 2 == 0
-                                    ? imp_scale_ascend
-                                    : imp_scale_descend;
-                                for (u32 j = 0; j < subdiv2; ++j) {
-                                    if (rand() % 4) {
-                                        note = move_func(scale, scale_root, note);
-                                        events.write(IMP_EVENT_TYPE_STRIKE);
-                                        events.write(note);
-                                        events.write(IMP_EVENT_TYPE_WAIT);
-                                        events.write(1);
-                                        events.write(subdiv * subdiv2);
-                                        events.write(IMP_EVENT_TYPE_RELEASE);
-                                        events.write(note);
-                                    } else {
-                                        events.write(IMP_EVENT_TYPE_WAIT);
-                                        events.write(1);
-                                        events.write(subdiv * subdiv2);
-                                    }
+                    u32 subdiv = pow(2, rand() % 3); // ∈ { 1, 2, 4 }
+                    u8 note = imp_note(
+                        (IMP_NOTE)scale_rand(scale, scale_root),
+                        (IMP_OCTAVE)(IMP_OCTAVE_MINUS_2 + rand() % 2)
+                    );
+                    for (u32 i = 0; i < subdiv; ++i) {
+                        if (rand() % 2) {
+                            u32 subdiv2 = pow(2, rand() % 3); // ∈ { 1, 2, 4 }
+                            u8 (*move_func)(imp_scale, u8, u8) = rand() % 2 == 0
+                                ? scale_ascend
+                                : scale_descend;
+                            for (u32 j = 0; j < subdiv2; ++j) {
+                                if (rand() % 4) {
+                                    note = move_func(scale, scale_root, note);
+                                    events.write(IMP_EVENT_TYPE_STRIKE);
+                                    events.write(note);
+                                    events.write(IMP_EVENT_TYPE_WAIT);
+                                    events.write(1);
+                                    events.write(subdiv * subdiv2);
+                                    events.write(IMP_EVENT_TYPE_RELEASE);
+                                    events.write(note);
+                                } else {
+                                    events.write(IMP_EVENT_TYPE_WAIT);
+                                    events.write(1);
+                                    events.write(subdiv * subdiv2);
                                 }
-                            } else {
-                                note = imp_note(
-                                    (IMP_NOTE)imp_scale_rand(scale, scale_root),
-                                    (IMP_OCTAVE)(IMP_OCTAVE_MINUS_1 + rand() % 2)
-                                );
-                                events.write(IMP_EVENT_TYPE_STRIKE);
-                                events.write(note);
-                                events.write(IMP_EVENT_TYPE_WAIT);
-                                events.write(1);
-                                events.write(subdiv);
-                                events.write(IMP_EVENT_TYPE_RELEASE);
-                                events.write(note);
                             }
+                        } else {
+                            note = imp_note(
+                                (IMP_NOTE)scale_rand(scale, scale_root),
+                                (IMP_OCTAVE)(IMP_OCTAVE_MINUS_1 + rand() % 2)
+                            );
+                            events.write(IMP_EVENT_TYPE_STRIKE);
+                            events.write(note);
+                            events.write(IMP_EVENT_TYPE_WAIT);
+                            events.write(1);
+                            events.write(subdiv);
+                            events.write(IMP_EVENT_TYPE_RELEASE);
+                            events.write(note);
                         }
                     }
                 }
@@ -648,148 +642,142 @@ FMOD_RESULT F_CALLBACK pcmreadcallback(FMOD_SOUND* sound, void* data, u32 datale
                 u8 event = events.read();
 
                 if (event == IMP_EVENT_TYPE_STRIKE) {
-                    u8 note = events.read();
-                    f32 freq = imp_note_freqs[note];
-                    imp_voice *found = 0;
+                    f32 freq = imp_note_freqs[events.read()];
+                    bool found = false;
                     for (u32 i = 0; i < IMP_NUM_VOICES; ++i) {
-                        imp_voice* voice = &synth->voices[i];
-                        if (!found && voice->state == IMP_VOICE_STATE_OFF) {
-                            found = voice;
-                        } else if (voice->freq == freq && voice->state != IMP_VOICE_STATE_RELEASE) {
-                            // release this voice in order to not have double voices running
-                            voice->released = song->time;
-                            voice->state = IMP_VOICE_STATE_RELEASE;
+                        imp_voice& voice = synth.voices[i];
+                        if (!found && voice.state == IMP_VOICE_STATE_OFF) {
+                            found = true;
+                            voice.freq = freq;
+                            voice.start_time = song.time;
+                            voice.state = IMP_VOICE_STATE_ATTACK;
+                        // } else if (voice.freq == freq && voice.state != IMP_VOICE_STATE_RELEASE) {
+                        //     // release this voice in order to not have double voices running
+                        //     // TODO is this really a behaviour we want?
+                        //     voice.release_time = song.time;
+                        //     voice.state = IMP_VOICE_STATE_RELEASE;
                         }
-                    }
-                    if (found) {
-                        found->freq = imp_note_freqs[note];
-                        found->started = song->time;
-                        found->state = IMP_VOICE_STATE_ATTACK;
                     }
                 } else if (event == IMP_EVENT_TYPE_RELEASE) {
                     f32 freq = imp_note_freqs[events.read()];
                     for (u32 i = 0; i < IMP_NUM_VOICES; ++i) {
-                        imp_voice* voice = &synth->voices[i];
+                        imp_voice& voice = synth.voices[i];
 
-                        if (voice->freq == freq && voice->state != IMP_VOICE_STATE_OFF && voice->state != IMP_VOICE_STATE_RELEASE) {
+                        if (voice.freq == freq && voice.state != IMP_VOICE_STATE_OFF && voice.state != IMP_VOICE_STATE_RELEASE) {
                             // Calculate current adsr release volume (if still in attack / decay phase, a sudden jump down to sustain level would cause an audible discontinuity)
-                            if (voice->state == IMP_VOICE_STATE_ATTACK) {
-                                voice->adsr_release_vol = synth->adsr.a * imp_lerp_array(
-                                  synth->adsr.af,
+                            if (voice.state == IMP_VOICE_STATE_ATTACK) {
+                                voice.adsr_release_vol = synth.adsr.a * lerp_array(
+                                  synth.adsr.af,
                                   IMP_FILTER_SIZE,
-                                  (song->time - voice->started) / synth->adsr.at
+                                  (song.time - voice.start_time) / synth.adsr.at
                                 );
-                            } else if (voice->state == IMP_VOICE_STATE_DECAY) {
-                                voice->adsr_release_vol = synth->adsr.s + (synth->adsr.a - synth->adsr.s) * imp_lerp_array(
-                                  synth->adsr.df,
+                            } else if (voice.state == IMP_VOICE_STATE_DECAY) {
+                                voice.adsr_release_vol = synth.adsr.s + (synth.adsr.a - synth.adsr.s) * lerp_array(
+                                  synth.adsr.df,
                                   IMP_FILTER_SIZE,
-                                  (song->time - voice->started - synth->adsr.at) / synth->adsr.dt
+                                  (song.time - voice.start_time - synth.adsr.at) / synth.adsr.dt
                                 );
-                            } else { // voice->state == IMP_VOICE_STATE_SUSTAIN
-                                voice->adsr_release_vol = synth->adsr.s;
+                            } else { // voice.state == IMP_VOICE_STATE_SUSTAIN
+                                voice.adsr_release_vol = synth.adsr.s;
                             }
 
-                            voice->released = song->time;
-                            voice->state = IMP_VOICE_STATE_RELEASE;
+                            voice.release_time = song.time;
+                            voice.state = IMP_VOICE_STATE_RELEASE;
                         }
                     }
                 } else if (event == IMP_EVENT_TYPE_WAIT) {
                     u8 wait = events.read();
                     u8 div = events.read();
-                    f32 beats_wait = wait * 4.0f / div;
-                    instrument_instance->e_countdown = 60 * beats_wait / song->bpm;
+                    f32 beats_wait = wait * 4.f / div;
+                    instrument_instance.e_countdown = 60 * beats_wait / song.bpm;
                 }
             }
 
             // Countdown to next event
-            instrument_instance->e_countdown -= dt;
+            instrument_instance.e_countdown -= dt;
 
             // Sum voice amplitudes
             for (u32 i = 0; i < IMP_NUM_VOICES; ++i)
             {
                 // Get active voice
-                imp_voice *voice = &synth->voices[i];
-                if (!voice || voice->state == IMP_VOICE_STATE_OFF) {
+                imp_voice& voice = synth.voices[i];
+                if (voice.state == IMP_VOICE_STATE_OFF) {
                     continue;
                 }
 
                 // Calculate ADSR filter modifier
                 f32 adsr;
-                if (voice->state == IMP_VOICE_STATE_ATTACK) {
-                    adsr = synth->adsr.a * imp_lerp_array(
-                      synth->adsr.af,
+                if (voice.state == IMP_VOICE_STATE_ATTACK) {
+                    adsr = synth.adsr.a * lerp_array(
+                      synth.adsr.af,
                       IMP_FILTER_SIZE,
-                      (song->time - voice->started) / synth->adsr.at
+                      (song.time - voice.start_time) / synth.adsr.at
                     );
-                } else if (voice->state == IMP_VOICE_STATE_DECAY) {
-                    adsr = synth->adsr.s + (synth->adsr.a - synth->adsr.s) * imp_lerp_array(
-                      synth->adsr.df,
+                } else if (voice.state == IMP_VOICE_STATE_DECAY) {
+                    adsr = synth.adsr.s + (synth.adsr.a - synth.adsr.s) * lerp_array(
+                      synth.adsr.df,
                       IMP_FILTER_SIZE,
-                      (song->time - voice->started - synth->adsr.at) / synth->adsr.dt
+                      (song.time - voice.start_time - synth.adsr.at) / synth.adsr.dt
                     );
-                } else if (voice->state == IMP_VOICE_STATE_SUSTAIN) {
-                    adsr = synth->adsr.s;
-                } else { // voice->state == IMP_VOICE_STATE_RELEASE
-                    adsr = voice->adsr_release_vol * imp_lerp_array(
-                      synth->adsr.rf,
+                } else if (voice.state == IMP_VOICE_STATE_SUSTAIN) {
+                    adsr = synth.adsr.s;
+                } else { // voice.state == IMP_VOICE_STATE_RELEASE
+                    adsr = voice.adsr_release_vol * lerp_array(
+                      synth.adsr.rf,
                       IMP_FILTER_SIZE,
-                      (song->time - voice->released) / synth->adsr.rt
+                      (song.time - voice.release_time) / synth.adsr.rt
                     );
                 }
 
                 // Interpolate and sum amplitude
-                amplitude_sum += adsr * voice->vol * imp_lerp_array_circular(synth->wavetable, IMP_WAVETABLE_SIZE, voice->phase);
+                amplitude_sum += adsr * voice.vol * lerp_array_circular(synth.wavetable, IMP_WAVETABLE_SIZE, voice.phase);
 
                 // Proceed phase
-                voice->phase += dt * (synth->vibrato.amp * sin(TWOPIF * synth->lfo * synth->vibrato.freq) + voice->freq);
-                if (voice->phase < 0) {
-                    ++voice->phase;
-                } else if (voice->phase >= 1) {
-                    --voice->phase;
+                voice.phase += dt * (synth.vibrato.amp * sin(TWOPIF * synth.lfo * synth.vibrato.freq) + voice.freq);
+                if (voice.phase < 0.f) {
+                    ++voice.phase;
+                } else if (voice.phase >= 1.f) {
+                    --voice.phase;
                 }
 
                 // Age
-                if (voice->state == IMP_VOICE_STATE_ATTACK && (song->time - voice->started) >= synth->adsr.at) {
-                    voice->state = IMP_VOICE_STATE_DECAY;
-                } else if (voice->state == IMP_VOICE_STATE_DECAY && (song->time - voice->started) >= synth->adsr.at + synth->adsr.dt) {
-                    voice->state = IMP_VOICE_STATE_SUSTAIN;
-                } else if (voice->state == IMP_VOICE_STATE_RELEASE && (song->time - voice->released) >= synth->adsr.rt) {
-                    voice->state = IMP_VOICE_STATE_OFF;
+                if (voice.state == IMP_VOICE_STATE_ATTACK && (song.time - voice.start_time) >= synth.adsr.at) {
+                    voice.state = IMP_VOICE_STATE_DECAY;
+                } else if (voice.state == IMP_VOICE_STATE_DECAY && (song.time - voice.start_time) >= synth.adsr.at + synth.adsr.dt) {
+                    voice.state = IMP_VOICE_STATE_SUSTAIN;
+                } else if (voice.state == IMP_VOICE_STATE_RELEASE && (song.time - voice.release_time) >= synth.adsr.rt) {
+                    voice.state = IMP_VOICE_STATE_OFF;
                 }
             }
 
             // Update oscillator
-            synth->lfo += dt;
-            if (synth->lfo >= 1) {
-                --synth->lfo;
+            synth.lfo += dt;
+            if (synth.lfo >= 1.f) {
+                --synth.lfo;
             }
         }
 
-        song->time += dt;
-        song->absolute_time += IMP_INV_SAMPLE_FREQ;
+        song.time += dt;
+        song.absolute_time += IMP_INV_SAMPLE_FREQ;
 
-        f32 time_lerp_start_time = 5;
-        f32 time_lerp_duration = 3;
-        if (song->absolute_time > time_lerp_start_time) {
-            f32 t = (song->absolute_time - time_lerp_start_time) / time_lerp_duration;
-            if (t > 1) {
-              t = 1;
-            }
-            f32 ct = -cos(t * PI) * 0.5f + 0.5f;
-            song->time_scale = 1 - ct;
+        f32 time_lerp_start_time = 5.f;
+        f32 time_lerp_duration = 3.f;
+        if (song.absolute_time > time_lerp_start_time) {
+            f32 t = (song.absolute_time - time_lerp_start_time) / time_lerp_duration;
+            song.time_scale = cerp(1.f, 0.f, min(t, 1.f));
         }
 
         // Clamp amplitude
-        if (amplitude_sum >= 1.0f) {
-            amplitude_sum = 1.0f;
+        if (amplitude_sum >= 1.f) {
+            amplitude_sum = 1.f;
             puts("clip+");
-        } else if (amplitude_sum <= -1.0f) {
-            amplitude_sum = -1.0f;
+        } else if (amplitude_sum <= -1.f) {
+            amplitude_sum = -1.f;
             puts("clip-");
         }
 
         // Write channel data
-        s16 val = (s16)(amplitude_sum * 32767.0f);
+        s16 val = (s16)(amplitude_sum * 32767.f);
         *stereo16bitbuffer++ = val; // left channel
         *stereo16bitbuffer++ = val; // right channel
     }
@@ -821,7 +809,7 @@ s32 main()
             f32 div = (f32)(i + 1);
             harmonics[i] = (rand() % 5) / (div * div);
         }
-        imp_wavetable_from_harmonics(random_wavetable, harmonics, N);
+        wavetable_from_harmonics(random_wavetable, harmonics, N);
     }
 
     f32 sine_wavetable[IMP_WAVETABLE_SIZE] = { 0 };
@@ -829,13 +817,13 @@ s32 main()
         f32 harmonics[1] = { 0 };
         u32 N = sizeof(harmonics) / sizeof(f32);
         harmonics[0] = 1;
-        imp_wavetable_from_harmonics(sine_wavetable, harmonics, N);
+        wavetable_from_harmonics(sine_wavetable, harmonics, N);
     }
 
     f32 violin_wavetable[IMP_WAVETABLE_SIZE] = { 0 };
     {
-        f32 harmonics[] = { 1.0f, 0.75f, 0.65f, 0.55f, 0.50f, 0.45f, 0.4f, 0.35f, 0.3f, 0.25f, 0.25f, 0.2f };
-        imp_wavetable_from_harmonics(violin_wavetable, harmonics, sizeof(harmonics) / sizeof(f32));
+        f32 harmonics[] = { 1.f, .75f, .65f, .55f, .5f, .45f, .4f, .35f, .3f, .25f, .25f, .2f };
+        wavetable_from_harmonics(violin_wavetable, harmonics, sizeof(harmonics) / sizeof(f32));
     }
 
     // Fill AD(S)R filters
@@ -844,11 +832,11 @@ s32 main()
     f32 release_filter[IMP_FILTER_SIZE] = { 0 };
     {
         // Linear functions for now
-        f32 fsize = (f32)(IMP_FILTER_SIZE - 1);
+        f32 fsize = IMP_FILTER_SIZE - 1.f;
         for (s32 i = 0; i != IMP_FILTER_SIZE; ++i) {
             attack_filter[i] = i / fsize;
-            decay_filter[i] = 1.0f - (i / fsize);
-            release_filter[i] = 1.0f - (i / fsize);
+            decay_filter[i] = 1.f - (i / fsize);
+            release_filter[i] = 1.f - (i / fsize);
         }
     }
 
@@ -856,7 +844,7 @@ s32 main()
     imp_voice voices[IMP_NUM_VOICES * IMP_NUM_SYNTHS] = { 0 };
     for (s32 i = 0; i < IMP_NUM_VOICES * IMP_NUM_SYNTHS; ++i)
     {
-        voices[i].vol = 0.25f;
+        voices[i].vol = .25f;
     }
 
     // Setup synths
@@ -864,16 +852,16 @@ s32 main()
     for (s32 i = 0; i != IMP_NUM_SYNTHS; ++i) {
         synths[i].voices = voices + i * IMP_NUM_VOICES;
         synths[i].wavetable = violin_wavetable;
-        synths[i].adsr.at = 0.068f;
-        synths[i].adsr.dt = 0.814f;
-        synths[i].adsr.rt = 0.045f;
-        synths[i].adsr.a = 0.7f;
-        synths[i].adsr.s = 0.5f;
+        synths[i].adsr.at = .068f;
+        synths[i].adsr.dt = .814f;
+        synths[i].adsr.rt = .045f;
+        synths[i].adsr.a = .7f;
+        synths[i].adsr.s = .5f;
         synths[i].adsr.af = attack_filter;
         synths[i].adsr.df = decay_filter;
         synths[i].adsr.rf = release_filter;
-        synths[i].vibrato.amp = 0.5f;
-        synths[i].vibrato.freq = 3;
+        synths[i].vibrato.amp = .5f;
+        synths[i].vibrato.freq = 3.f;
     }
 
     // Setup scales
@@ -913,9 +901,9 @@ s32 main()
     {
         song.bpm = 130;
         song.instrument_instances = instrument_instances;
-        song.time_scale = 1;
-        song.time = 0;
-        song.absolute_time = 0;
+        song.time_scale = 1.f;
+        song.time = 0.f;
+        song.absolute_time = 0.f;
     }
 
     // Init FMOD
@@ -924,7 +912,7 @@ s32 main()
     FMOD::Sound *sound;
 
     FMODERRCHECK(FMOD::System_Create(&system));
-    FMODERRCHECK(system->init(512, FMOD_INIT_NORMAL, 0));
+    FMODERRCHECK(system->init(512, FMOD_INIT_NORMAL, nullptr));
 
     // Create sound stream
     {
@@ -935,14 +923,14 @@ s32 main()
         exinfo.numchannels       = 2;                               /* Number of channels in the sound. */
         exinfo.defaultfrequency  = IMP_SAMPLE_FREQ;                 /* Default playback rate of sound. */
         exinfo.decodebuffersize  = 2048;                            /* Chunk size of stream update in samples. This will be the amount of data passed to the user callback. */
-        exinfo.length            = exinfo.defaultfrequency * exinfo.numchannels * sizeof(signed short) * 1; /* Length of PCM data in bytes of whole song (for Sound::getLength) */
+        exinfo.length            = exinfo.defaultfrequency * exinfo.numchannels * sizeof(s16); /* Length of PCM data in bytes of whole song (for Sound::getLength) */
         exinfo.format            = FMOD_SOUND_FORMAT_PCM16;         /* Data format of sound. */
         exinfo.pcmreadcallback   = pcmreadcallback;                 /* User callback for reading. */
         exinfo.pcmsetposcallback = pcmsetposcallback;               /* User callback for seeking. */
         exinfo.userdata = &song;
 
-        FMODERRCHECK(system->createSound(0, mode, &exinfo, &sound));
-        FMODERRCHECK(system->playSound(sound, 0, 0, &channel));
+        FMODERRCHECK(system->createSound(nullptr, mode, &exinfo, &sound));
+        FMODERRCHECK(system->playSound(sound, nullptr, false, &channel));
     }
 
     // FMOD::DSP* dsp_echo;
@@ -962,7 +950,7 @@ s32 main()
     // FMODERRCHECK(channelgroup->addDSP(1, dsp_lowpass));
 
     std::chrono::time_point<std::chrono::high_resolution_clock, std::chrono::nanoseconds> t, t0 = std::chrono::high_resolution_clock::now();
-    f32 dt, prev_elapsed, elapsed = 0;
+    f32 dt, prev_elapsed, elapsed = 0.f;
 
     bool isPlaying = true;
     while (isPlaying && song.time_scale > FLT_EPSILON) {
@@ -970,7 +958,7 @@ s32 main()
         {
             t = std::chrono::high_resolution_clock::now();
             prev_elapsed = elapsed;
-            elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(t - t0).count() / 1000.0f;
+            elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(t - t0).count() / 1000.f;
             dt = elapsed - prev_elapsed;
         }
 
