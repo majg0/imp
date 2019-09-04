@@ -4,6 +4,12 @@ set(CMAKE_CXX_STANDARD 17)
 
 set(INCL_DIRS ${FMOD_DIR}/inc)
 
+include_directories(${INCL_DIRS} ${CMAKE_SOURCE_DIR}/src)
+file(GLOB_RECURSE SOURCES
+    ${CMAKE_SOURCE_DIR}/src/*.hpp
+    ${CMAKE_SOURCE_DIR}/src/*.cpp
+)
+
 link_directories(${FMOD_DIR}/lib)
 
 if (WIN32)
@@ -12,6 +18,5 @@ elseif (APPLE)
   set(LIBS fmod)
 endif()
 
-include_directories(${INCL_DIRS})
-add_executable(imp main.cpp)
+add_executable(imp ${SOURCES})
 target_link_libraries (imp ${LIBS})

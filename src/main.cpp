@@ -7,7 +7,7 @@
 #include <fmod.hpp>
 #include <chrono>
 #include <iostream>
-#include <utility>
+#include "circular_rw_buffer.hpp"
 #ifdef WIN32
 #include <windows.h>
 #define SLEEP(ms) Sleep(ms)
@@ -342,97 +342,6 @@ struct imp_synth
   imp_vibrato vibrato;
 };
 
-template <typename T>
-class CircularRWBuffer
-{
-public:
-  enum ReadError
-  {
-    BufferEmpty
-  };
-
-  enum WriteError
-  {
-    BufferFull
-  };
-
-  enum State
-  {
-    Empty,
-    Normal,
-    Full
-  };
-
-  template <typename... TArgs>
-  void write(TArgs... datas)
-  {
-    (write_impl(std::forward<TArgs>(datas)), ...);
-  }
-
-  T read()
-  {
-    if (state == Empty)
-    {
-      throw BufferEmpty;
-    }
-
-    T result = *(buffer + r_ptr_offset);
-
-    if (++r_ptr_offset >= BUFSIZE)
-    {
-      r_ptr_offset = 0;
-    }
-
-    if (r_ptr_offset == w_ptr_offset)
-    {
-      state = Empty;
-    }
-    else
-    {
-      state = Normal;
-    }
-
-    return result;
-  }
-
-  State getState()
-  {
-    return state;
-  }
-
-private:
-  static constexpr size_t BUFSIZE = 128;
-
-  void write_impl(T data)
-  {
-    if (state == Full)
-    {
-      throw BufferFull;
-    }
-
-    *(buffer + w_ptr_offset) = data;
-
-    if (++w_ptr_offset >= BUFSIZE)
-    {
-      w_ptr_offset = 0;
-    }
-
-    if (w_ptr_offset == r_ptr_offset)
-    {
-      state = Full;
-    }
-    else
-    {
-      state = Normal;
-    }
-  }
-
-  T buffer[BUFSIZE] = {0};
-  size_t r_ptr_offset = 0;
-  size_t w_ptr_offset = 0;
-  State state = Empty;
-};
-
 struct imp_instrument_instance
 {
   bool active;
@@ -659,7 +568,7 @@ FMOD_RESULT F_CALLBACK pcmreadcallback(FMOD_SOUND *sound, void *data, u32 datale
       {
         auto &events = instrument_instance.queue;
 
-        if (events.getState() == CircularRWBuffer<u8>::State::Empty)
+        if (events.getState() == CircularRWBufferBase::State::Empty)
         {
           // Generate future events from plan
 
@@ -672,9 +581,10 @@ FMOD_RESULT F_CALLBACK pcmreadcallback(FMOD_SOUND *sound, void *data, u32 datale
             if (rand() % 2)
             {
               u32 subdiv2 = pow(2, rand() % 3); // ∈ { 1, 2, 4 }
-              u8 (*move_func)(imp_scale, u8, u8) = rand() % 2 == 0
-                                                       ? scale_ascend
-                                                       : scale_descend;
+              using F = u8 (*)(imp_scale, u8, u8);
+              F move_func = rand() % 2 == 0
+                                ? scale_ascend
+                                : scale_descend;
               for (u32 j = 0; j < subdiv2; ++j)
               {
                 if (rand() % 4)
