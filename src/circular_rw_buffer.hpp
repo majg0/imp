@@ -3,30 +3,17 @@
 
 #include <utility>
 
-class CircularRWBufferBase
-{
+class CircularRWBufferBase {
 public:
-  enum ReadError
-  {
-    BufferEmpty
-  };
+  enum ReadError { BufferEmpty };
 
-  enum WriteError
-  {
-    BufferFull
-  };
+  enum WriteError { BufferFull };
 
-  enum State
-  {
-    Empty,
-    Normal,
-    Full
-  };
+  enum State { Empty, Normal, Full };
 };
 
 template <typename T>
-class CircularRWBuffer : CircularRWBufferBase
-{
+class CircularRWBuffer : CircularRWBufferBase {
 public:
   template <typename... TArgs>
   void write(TArgs... datas);
@@ -56,24 +43,20 @@ void CircularRWBuffer<T>::write(TArgs... datas)
 template <typename T>
 T CircularRWBuffer<T>::read()
 {
-  if (state == Empty)
-  {
+  if (state == Empty) {
     throw BufferEmpty;
   }
 
   T result = *(buffer + r_ptr_offset);
 
-  if (++r_ptr_offset >= BUFSIZE)
-  {
+  if (++r_ptr_offset >= BUFSIZE) {
     r_ptr_offset = 0;
   }
 
-  if (r_ptr_offset == w_ptr_offset)
-  {
+  if (r_ptr_offset == w_ptr_offset) {
     state = Empty;
   }
-  else
-  {
+  else {
     state = Normal;
   }
 
@@ -89,24 +72,20 @@ CircularRWBufferBase::State CircularRWBuffer<T>::getState()
 template <typename T>
 void CircularRWBuffer<T>::write_impl(T data)
 {
-  if (state == Full)
-  {
+  if (state == Full) {
     throw BufferFull;
   }
 
   *(buffer + w_ptr_offset) = data;
 
-  if (++w_ptr_offset >= BUFSIZE)
-  {
+  if (++w_ptr_offset >= BUFSIZE) {
     w_ptr_offset = 0;
   }
 
-  if (w_ptr_offset == r_ptr_offset)
-  {
+  if (w_ptr_offset == r_ptr_offset) {
     state = Full;
   }
-  else
-  {
+  else {
     state = Normal;
   }
 }
