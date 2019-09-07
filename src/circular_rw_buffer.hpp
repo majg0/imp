@@ -1,5 +1,5 @@
-#ifndef IMP_CIRCULAR_RW_BUFFER_HPP
-#define IMP_CIRCULAR_RW_BUFFER_HPP
+#ifndef IMP_CIRCULAR_RW_BUFFER
+#define IMP_CIRCULAR_RW_BUFFER
 
 #include <utility>
 

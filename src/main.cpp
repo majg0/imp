@@ -1,4 +1,6 @@
 #include "circular_rw_buffer.hpp"
+#include "constants.hpp"
+#include "wavetable.hpp"
 
 #include <fmod.hpp>
 #include <fmod_errors.h>
@@ -19,19 +21,6 @@
 #include <cstring>
 #include <iostream>
 
-// Typedefs ///////////////////////////////////////////////////////////////////
-
-typedef uint8_t u8;
-typedef uint16_t u16;
-typedef uint32_t u32;
-typedef uint64_t u64;
-typedef int8_t s8;
-typedef int16_t s16;
-typedef int32_t s32;
-typedef int64_t s64;
-typedef float f32;
-typedef double f64;
-
 // General Defines ////////////////////////////////////////////////////////////
 
 #define FMODERRCHECK(_result) FMODERRCHECK_fn(_result, __FILE__, __LINE__)
@@ -48,24 +37,6 @@ void FMODSOUNDERRCHECK_fn(FMOD_RESULT result, const char *file, s32 line)
     printf("%s(%d): FMOD error %d - %s\n", file, line, result, FMOD_ErrorString(result));
   }
 }
-
-// Static data ////////////////////////////////////////////////////////////////
-
-constexpr f32 IMP_SAMPLE_FREQ = 44100.f;
-constexpr f32 IMP_INV_SAMPLE_FREQ = .000022675736961451248f;
-
-constexpr size_t IMP_WAVETABLE_SIZE = 1024;
-
-constexpr size_t IMP_FILTER_SIZE = 32;
-constexpr size_t IMP_MAX_FILTER_INDEX = 31;
-
-constexpr size_t IMP_NUM_VOICES = 32;
-constexpr size_t IMP_NUM_SYNTHS = 16;
-constexpr size_t IMP_NUM_INSTRUMENT_INSTANCES = 64;
-
-constexpr f64 PI = 3.14159265359;
-constexpr f64 TWOPI = 6.283185307179586476925286766559;
-constexpr f32 TWOPIF = 6.283185307179586476925286766559f;
 
 // The frequencies for all MIDI notes
 static f32 imp_note_freqs[] = {
@@ -328,7 +299,7 @@ struct imp_scale {
 
 struct imp_synth {
   f32 lfo;
-  f32 *wavetable;
+  HarmonicsWavetable wavetable;
   imp_voice *voices;
   imp_adsr adsr;
   imp_vibrato vibrato;
@@ -353,84 +324,6 @@ struct imp_song {
 };
 
 // Helper functions ///////////////////////////////////////////////////////////
-
-template <typename T>
-inline T max(T a, T b)
-{
-  return a > b ? a : b;
-}
-
-template <typename T>
-inline T min(T a, T b)
-{
-  return a < b ? a : b;
-}
-
-inline f32 lerp(f32 a, f32 b, f32 t)
-{
-  return (1.f - t) * a + t * b; // precise lerp
-}
-
-inline f32 cerp(f32 a, f32 b, f32 t)
-{
-  return lerp(a, b, .5f - cos(t * PI) * .5f);
-}
-
-inline f32 lerp_array(f32 *values, u32 size, f32 t)
-{
-  f32 ixf = t * size;
-  u32 ix = (u32)ixf;
-  u32 max_ix = size - 1;
-  return lerp(values[min(ix, max_ix)], values[min(ix + 1, max_ix)], ixf - ix);
-}
-
-inline f32 lerp_array_circular(f32 *values, u32 size, f32 t)
-{
-  while (t >= 1.f) {
-    t -= 1.f;
-  }
-  f32 ixf = t * size;
-  u32 ix = ((u32)ixf) % size;
-  return lerp(values[ix], values[(ix + 1) % size], ixf - ix);
-}
-
-inline void wavetable_from_harmonics(f32 *wavetable, f32 *harmonics, u32 N)
-{
-  // Precompute harmonics normalization factor n
-  f32 n = 0.f;
-  for (u32 k = 0; k != N; ++k) {
-    n += harmonics[k];
-  }
-  n = 1.f / n;
-
-  // Fill the wavetable
-  f32 c = TWOPIF / (f32)IMP_WAVETABLE_SIZE;
-  for (u32 i = 0; i != IMP_WAVETABLE_SIZE; ++i) {
-    for (u32 k = 0; k != N; ++k) {
-      wavetable[i] += n * harmonics[k] * sin(c * i * (k + 1));
-    }
-  }
-}
-
-void print_dbg_wavetable(f32 *wavetable)
-{
-  constexpr int height = 80;
-  constexpr int width = 130;
-  for (int k = 0; k != height; ++k) {
-    for (int i = width - 1; i != 0; --i) {
-      f32 val =
-        .5f + .5f * lerp_array_circular(wavetable, IMP_WAVETABLE_SIZE, (f32)i / (f32)(width));
-
-      if (val * height >= k && val * height < k + 1) {
-        std::cout << "x";
-      }
-      else {
-        std::cout << " ";
-      }
-    }
-    std::cout << std::endl;
-  }
-}
 
 inline u8 imp_note(IMP_NOTE note, IMP_OCTAVE octave)
 {
@@ -679,8 +572,7 @@ FMOD_RESULT F_CALLBACK pcmreadcallback(FMOD_SOUND *sound, void *data, u32 datale
         }
 
         // Interpolate and sum amplitude
-        amplitude_sum +=
-          adsr * voice.vol * lerp_array_circular(synth.wavetable, IMP_WAVETABLE_SIZE, voice.phase);
+        amplitude_sum += adsr * voice.vol * synth.wavetable.sample(voice.phase);
 
         // Proceed phase
         voice.phase +=
@@ -761,31 +653,18 @@ s32 main()
   std::cin >> seed;
   srand(seed);
 
-  // Fill wavetables
-  f32 random_wavetable[IMP_WAVETABLE_SIZE] = {0};
-  {
-    f32 harmonics[32] = {0};
-    u32 N = sizeof(harmonics) / sizeof(f32);
-    for (u32 i = 0; i != N; ++i) {
+  auto random_wavetable = ([]() {
+    std::vector<f32> harmonics;
+    for (u32 i = 0; i != 32; ++i) {
       f32 div = (f32)(i + 1);
-      harmonics[i] = (rand() % 5) / (div * div);
+      harmonics.push_back((rand() % 5) / (div * div));
     }
-    wavetable_from_harmonics(random_wavetable, harmonics, N);
-  }
+    return HarmonicsWavetable(harmonics);
+  })();
 
-  f32 sine_wavetable[IMP_WAVETABLE_SIZE] = {0};
-  {
-    f32 harmonics[1] = {0};
-    u32 N = sizeof(harmonics) / sizeof(f32);
-    harmonics[0] = 1;
-    wavetable_from_harmonics(sine_wavetable, harmonics, N);
-  }
+  auto sine_wavetable = HarmonicsWavetable({1});
 
-  f32 violin_wavetable[IMP_WAVETABLE_SIZE] = {0};
-  {
-    f32 harmonics[] = {1.f, .75f, .65f, .55f, .5f, .45f, .4f, .35f, .3f, .25f, .25f, .2f};
-    wavetable_from_harmonics(violin_wavetable, harmonics, sizeof(harmonics) / sizeof(f32));
-  }
+  auto violin_wavetable = {1.f, .75f, .65f, .55f, .5f, .45f, .4f, .35f, .3f, .25f, .25f, .2f};
 
   // Fill AD(S)R filters
   f32 attack_filter[IMP_FILTER_SIZE] = {0};
