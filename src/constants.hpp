@@ -27,10 +27,6 @@ typedef double f64;
 constexpr f32 IMP_SAMPLE_FREQ = 44100.f;
 constexpr f32 IMP_INV_SAMPLE_FREQ = .000022675736961451248f;
 
-constexpr size_t IMP_FILTER_SIZE = 32;
-constexpr size_t IMP_MAX_FILTER_INDEX = 31;
-
-constexpr size_t IMP_NUM_VOICES = 32;
 constexpr size_t IMP_NUM_SYNTHS = 16;
 constexpr size_t IMP_NUM_INSTRUMENT_INSTANCES = 64;
 

@@ -11,6 +11,7 @@ class HarmonicsWavetable {
 public:
   HarmonicsWavetable() {}
   HarmonicsWavetable(std::vector<f32> harmonics) { fill(harmonics); }
+  HarmonicsWavetable(std::initializer_list<f32> harmonics) { fill(harmonics); }
 
   void fill(std::vector<f32> harmonics)
   {
@@ -31,7 +32,7 @@ public:
     }
   }
 
-  f32 sample(f32 t) { return lerp_array_circular(buffer, BUF_SIZE, t); }
+  const f32 sample(const f32 t) const { return lerp_array_circular(buffer, BUF_SIZE, t); }
 
   void dbg_print()
   {
