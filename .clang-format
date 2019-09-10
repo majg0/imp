@@ -11,10 +11,12 @@ BinPackParameters: false
 BreakBeforeBinaryOperators: None
 BreakBeforeBraces: Stroustrup
 BreakBeforeTernaryOperators: true
-ColumnLimit: 100
+ColumnLimit: 80
 ContinuationIndentWidth: 2
+DerivePointerAlignment: false
 IncludeBlocks: Preserve
 IndentPPDirectives: AfterHash
+PointerAlignment: Left
 ReflowComments: true
 TabWidth: 2
 UseTab: Never

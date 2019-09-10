@@ -38,7 +38,6 @@ void Voice::proceed_phase(const Synth &synth, const f32 current_time, const f32 
     --phase;
   }
 
-  // Age
   if (
     has_state(Voice::Releasing) &&
     (current_time - last_release_time) > synth.adsr_params.release_duration) {
@@ -64,7 +63,7 @@ const bool Voice::has_target_frequency(const f32 frequency) const
   return frequency == target_frequency;
 }
 
-f32 Voice::sample(const Synth &synth, const f32 song_time) const
+const f32 Voice::sample(const Synth &synth, const f32 song_time) const
 {
   const f32 adsr = synth.adsr_params.sample(state, last_strike_time, last_release_time, song_time);
   return adsr * vol * synth.wavetable.sample(phase);

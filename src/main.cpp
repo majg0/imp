@@ -1,5 +1,6 @@
 #include "circular_rw_buffer.hpp"
 #include "constants.hpp"
+#include "graph.hpp"
 #include "synth.hpp"
 #include "voice.hpp"
 #include "wavetable.hpp"
@@ -26,14 +27,14 @@
 // General Defines ////////////////////////////////////////////////////////////
 
 #define FMODERRCHECK(_result) FMODERRCHECK_fn(_result, __FILE__, __LINE__)
-void FMODERRCHECK_fn(FMOD_RESULT result, const char *file, s32 line)
+void FMODERRCHECK_fn(FMOD_RESULT result, const char* file, s32 line)
 {
   if (result != FMOD_OK) {
     printf("%s(%d): FMOD error %d - %s\n", file, line, result, FMOD_ErrorString(result));
   }
 }
 #define FMODSOUNDERRCHECK(_result) FMODSOUNDERRCHECK_fn(_result, __FILE__, __LINE__)
-void FMODSOUNDERRCHECK_fn(FMOD_RESULT result, const char *file, s32 line)
+void FMODSOUNDERRCHECK_fn(FMOD_RESULT result, const char* file, s32 line)
 {
   if (result != FMOD_OK && result != FMOD_ERR_INVALID_HANDLE) {
     printf("%s(%d): FMOD error %d - %s\n", file, line, result, FMOD_ErrorString(result));
@@ -250,7 +251,7 @@ enum IMP_EVENT_TYPE : u8 {
 
 struct imp_scale {
   u8 size;
-  u8 *ixs;
+  u8* ixs;
 };
 
 // struct imp_time_sig {
@@ -260,7 +261,7 @@ struct imp_scale {
 
 struct imp_instrument_instance {
   bool active;
-  Synth *synth;
+  Synth* synth;
   imp_scale scale;
   u8 scale_root;
   f64 e_countdown;
@@ -270,7 +271,7 @@ struct imp_instrument_instance {
 struct imp_song {
   f32 bpm;
   // u8 *form;
-  imp_instrument_instance *instrument_instances;
+  imp_instrument_instance* instrument_instances;
   f64 time_scale;
   f64 absolute_time;
   f64 time;
@@ -292,7 +293,7 @@ inline u8 imp_note(IMP_NOTE note, IMP_OCTAVE octave)
 /// scale    2  4  6
 /// offsets -3 -1 +1
 /// returns 1
-inline bool scale_rel_ix(imp_scale scale, u8 scale_root, u8 note, u8 *scale_ix, s8 *offset)
+inline bool scale_rel_ix(imp_scale scale, u8 scale_root, u8 note, u8* scale_ix, s8* offset)
 {
   s8 scale_note = (note + 12 - scale_root) % 12;
   *offset = 100; // init with unreasonably high offset
@@ -360,14 +361,14 @@ inline u8 scale_rand(imp_scale scale, u8 scale_root)
 //     eof
 // };
 
-FMOD_RESULT F_CALLBACK pcmreadcallback(FMOD_SOUND *sound, void *data, u32 datalen)
+FMOD_RESULT F_CALLBACK pcmreadcallback(FMOD_SOUND* sound, void* data, u32 datalen)
 {
-  imp_song *song_ptr;
-  ((FMOD::Sound *)sound)->getUserData((void **)&song_ptr);
-  imp_song &song = *song_ptr;
+  imp_song* song_ptr;
+  ((FMOD::Sound*)sound)->getUserData((void**)&song_ptr);
+  imp_song& song = *song_ptr;
 
   // Fill sound buffer
-  s16 *stereo16bitbuffer = (s16 *)data;
+  s16* stereo16bitbuffer = (s16*)data;
   for (u32 count = 0; count < (datalen >> 2); count++) // >>2 = 4 bytes per sample (16bit stereo)
   {
     f32 amplitude_sum = 0;
@@ -378,19 +379,19 @@ FMOD_RESULT F_CALLBACK pcmreadcallback(FMOD_SOUND *sound, void *data, u32 datale
     for (int instrument_instance_ix = 0; instrument_instance_ix < IMP_NUM_INSTRUMENT_INSTANCES;
          ++instrument_instance_ix) {
       // Get active instrument instance
-      imp_instrument_instance &instrument_instance =
+      imp_instrument_instance& instrument_instance =
         song.instrument_instances[instrument_instance_ix];
       if (!instrument_instance.active) {
         continue;
       }
 
-      Synth &synth = *instrument_instance.synth;
+      Synth& synth = *instrument_instance.synth;
       imp_scale scale = instrument_instance.scale;
       u8 scale_root = instrument_instance.scale_root;
 
       // Handle events
       while (instrument_instance.e_countdown <= 0) {
-        auto &events = instrument_instance.queue;
+        auto& events = instrument_instance.queue;
 
         if (events.getState() == CircularRWBufferBase::Empty) {
           // Generate future events from plan
@@ -434,7 +435,7 @@ FMOD_RESULT F_CALLBACK pcmreadcallback(FMOD_SOUND *sound, void *data, u32 datale
           std::find_if(
             synth.voices,
             synth.voices + Synth::NUM_VOICES,
-            [](const Voice &voice) { return voice.has_state(Voice::Off); })
+            [](const Voice& voice) { return voice.has_state(Voice::Off); })
             ->strike(freq, song.time, duration, Direct);
 
           instrument_instance.e_countdown = duration;
@@ -448,7 +449,7 @@ FMOD_RESULT F_CALLBACK pcmreadcallback(FMOD_SOUND *sound, void *data, u32 datale
           std::find_if(
             synth.voices,
             synth.voices + Synth::NUM_VOICES,
-            [](const Voice &voice) { return voice.has_state(Voice::Off); })
+            [](const Voice& voice) { return voice.has_state(Voice::Off); })
             ->strike(freq, song.time, duration / 4, Linear);
 
           instrument_instance.e_countdown = duration;
@@ -458,7 +459,7 @@ FMOD_RESULT F_CALLBACK pcmreadcallback(FMOD_SOUND *sound, void *data, u32 datale
           std::find_if(
             synth.voices,
             synth.voices + Synth::NUM_VOICES,
-            [freq](const Voice &voice) {
+            [freq](const Voice& voice) {
               return voice.has_state(Voice::On) && voice.has_target_frequency(freq);
             })
             ->release(synth, song.time);
@@ -477,7 +478,7 @@ FMOD_RESULT F_CALLBACK pcmreadcallback(FMOD_SOUND *sound, void *data, u32 datale
       // Sum voice amplitudes
       for (u32 i = 0; i < Synth::NUM_VOICES; ++i) {
         // Get active voice
-        Voice &voice = synth.voices[i];
+        Voice& voice = synth.voices[i];
         if (voice.has_state(Voice::Off)) {
           continue;
         }
@@ -524,7 +525,7 @@ FMOD_RESULT F_CALLBACK pcmreadcallback(FMOD_SOUND *sound, void *data, u32 datale
 }
 
 FMOD_RESULT F_CALLBACK pcmsetposcallback(
-  FMOD_SOUND * /*sound*/, s32 /*subsound*/, u32 /*position*/, FMOD_TIMEUNIT /*postype*/)
+  FMOD_SOUND* /*sound*/, s32 /*subsound*/, u32 /*position*/, FMOD_TIMEUNIT /*postype*/)
 {
   // This is useful if the user calls Channel::setPosition and you want to seek your data
   // accordingly.
@@ -532,6 +533,13 @@ FMOD_RESULT F_CALLBACK pcmsetposcallback(
 }
 
 s32 main()
+{
+  Test test;
+  test.test();
+  return 0;
+}
+
+s32 main2()
 {
   int seed = 0;
   std::cout << "Please input a seed:";
@@ -555,7 +563,7 @@ s32 main()
     for (u32 j = 0; j < Synth::NUM_VOICES; ++j) {
       synths[i].voices[j].vol = .25f;
     }
-    synths[i].wavetable = violin_wavetable;
+    synths[i].wavetable = random_wavetable;
     synths[i].adsr_params.attack_duration = .068f;
     synths[i].adsr_params.decay_duration = .014f;
     synths[i].adsr_params.release_duration = .045f;
@@ -624,9 +632,9 @@ s32 main()
   }
 
   // Init FMOD
-  FMOD::System *system = nullptr;
-  FMOD::Channel *channel = nullptr;
-  FMOD::Sound *sound;
+  FMOD::System* system = nullptr;
+  FMOD::Channel* channel = nullptr;
+  FMOD::Sound* sound;
 
   FMODERRCHECK(FMOD::System_Create(&system));
   FMODERRCHECK(system->init(512, FMOD_INIT_NORMAL, nullptr));
@@ -694,4 +702,6 @@ s32 main()
   FMODERRCHECK(system->close());
 
   FMODERRCHECK(system->release());
+
+  return 0;
 }
