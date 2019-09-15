@@ -55,8 +55,8 @@ enum Interpolation {
   Cosine,
 };
 
-inline const f32
-interpolate(const f32 a, const f32 b, const f32 t, const Interpolation interpolation)
+inline const f32 interpolate(
+  const f32 a, const f32 b, const f32 t, const Interpolation interpolation)
 {
   switch (interpolation) {
   case Direct:
@@ -75,10 +75,11 @@ interpolate(const f32 a, const f32 b, const f32 t, const Interpolation interpola
 //   f32 ixf = t * size;
 //   u32 ix = (u32)ixf;
 //   u32 max_ix = size - 1;
-//   return lerp(values[min(ix, max_ix)], values[min(ix + 1, max_ix)], ixf - ix);
+//   return lerp(values[min(ix, max_ix)], values[min(ix + 1, max_ix)], ixf -
+//   ix);
 // }
 
-inline const f32 lerp_array_circular(const f32 *values, const u32 size, f32 t)
+inline const f32 lerp_array_circular(const f32* values, const u32 size, f32 t)
 {
   while (t >= 1.f) {
     t -= 1.f;

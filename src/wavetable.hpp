@@ -32,7 +32,10 @@ public:
     }
   }
 
-  const f32 sample(const f32 t) const { return lerp_array_circular(buffer, BUF_SIZE, t); }
+  const f32 sample(const f32 t) const
+  {
+    return lerp_array_circular(buffer, BUF_SIZE, t);
+  }
 
   void dbg_print()
   {

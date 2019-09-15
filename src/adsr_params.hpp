@@ -34,7 +34,10 @@ struct AdsrParams {
       f32 duration = song_time - last_strike_time;
       if (duration < attack_duration) {
         return interpolate(
-          0.f, attack_amplitude, max(0.f, duration / attack_duration), attack_interpolation);
+          0.f,
+          attack_amplitude,
+          max(0.f, duration / attack_duration),
+          attack_interpolation);
       }
       if (duration < attack_duration + decay_duration) {
         return interpolate(
@@ -49,10 +52,13 @@ struct AdsrParams {
     if (state == Voice::Releasing) {
       f32 duration = song_time - last_release_time;
       if (duration < release_duration) {
-        f32 adsr_release_amount =
-          sample(Voice::On, last_strike_time, last_release_time, last_release_time);
+        f32 adsr_release_amount = sample(
+          Voice::On, last_strike_time, last_release_time, last_release_time);
         return interpolate(
-          adsr_release_amount, 0.f, duration / release_duration, release_interpolation);
+          adsr_release_amount,
+          0.f,
+          duration / release_duration,
+          release_interpolation);
       }
       return 0.f;
     }

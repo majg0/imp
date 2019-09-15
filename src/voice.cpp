@@ -16,16 +16,17 @@ void Voice::strike(
   state = On;
 }
 
-void Voice::release(const Synth &synth, const f32 current_time)
+void Voice::release(const Synth& synth, const f32 current_time)
 {
-  // Calculate current adsr release volume (if still in attack / decay phase, a sudden
-  // jump down to sustain level would cause an audible discontinuity)
+  // Calculate current adsr release volume (if still in attack / decay phase, a
+  // sudden jump down to sustain level would cause an audible discontinuity)
   last_frequency = get_frequency(current_time);
   last_release_time = current_time;
   state = Releasing;
 }
 
-void Voice::proceed_phase(const Synth &synth, const f32 current_time, const f32 dt)
+void Voice::proceed_phase(
+  const Synth& synth, const f32 current_time, const f32 dt)
 {
   phase += dt *
     (synth.vibrato.amp * sin(TWOPIF * synth.lfo * synth.vibrato.freq) +
@@ -63,8 +64,9 @@ const bool Voice::has_target_frequency(const f32 frequency) const
   return frequency == target_frequency;
 }
 
-const f32 Voice::sample(const Synth &synth, const f32 song_time) const
+const f32 Voice::sample(const Synth& synth, const f32 song_time) const
 {
-  const f32 adsr = synth.adsr_params.sample(state, last_strike_time, last_release_time, song_time);
+  const f32 adsr = synth.adsr_params.sample(
+    state, last_strike_time, last_release_time, song_time);
   return adsr * vol * synth.wavetable.sample(phase);
 }

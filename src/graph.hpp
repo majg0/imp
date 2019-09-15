@@ -70,7 +70,6 @@ private:
 //   f64 value;
 // };
 
-// TODO replace all f64 with f64 across repo
 class Timing {
 public:
   static constexpr f64 SAMPLE_FREQUENCY = 44100.;
