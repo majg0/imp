@@ -17,5 +17,5 @@ Now you can run it at `../bin/imp`
 
 You are bound to whatever the FMOD license says.
 In addition, all responsibility is on you, the library user, to obey said licenses.
-The author can in no way be held responsible for license violation by others.
+The author can in no way be held responsible for license violation by others than himself.
 You can do whatever you want with my code except taking credit for it.
