@@ -7,13 +7,13 @@
 
 // TODO
 struct imp_vibrato {
-  f32 amp;  // TODO (feat): type to ensure in hz
-  f32 freq; // TODO (feat): type to ensure in samples
+  f64 amp;  // TODO (feat): type to ensure in hz
+  f64 freq; // TODO (feat): type to ensure in samples
 };
 
 struct Synth {
   static constexpr size_t NUM_VOICES = 32;
-  f32 lfo;
+  f64 lfo;
   HarmonicsWavetable wavetable;
   Voice voices[NUM_VOICES];
   AdsrParams adsr_params;

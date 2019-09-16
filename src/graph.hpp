@@ -108,13 +108,13 @@ public:
   void on_tick(const Timing& timing)
   {
     phase += timing.get_scaled_delta_time();
-    if (phase > 1.f) {
+    if (phase > 1.) {
       --phase;
     }
   }
 
 private:
-  f64 phase = .0f;
+  f64 phase = .0;
   f64 frequency = .0;
 };
 
@@ -170,7 +170,7 @@ public:
   {
     auto context = Context();
     auto& osc = context.oscillator.create(441.);
-    auto& gain = context.gain.create(0.25f);
+    auto& gain = context.gain.create(0.25);
 
     context.graph.connect(osc, gain);
     for (u32 i = 0; i != 100; ++i) {

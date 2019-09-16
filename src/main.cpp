@@ -53,135 +53,135 @@ void FMODSOUNDERRCHECK_fn(FMOD_RESULT result, const char* file, s32 line)
 }
 
 // The frequencies for all MIDI notes
-static f32 imp_note_freqs[] = {
-  8.17579891564368f, // C-1 (First MIDI note)
-  8.66195721802722f, // Db-1
-  9.17702399741896f, // D-1
-  9.722718241315f,   // Eb-1
-  10.3008611535272f, // E-1
-  10.9133822322813f, // F-1
-  11.5623257097385f, // Gb-1
-  12.2498573744296f, // G-1
-  12.9782717993732f, // Ab-1
-  13.75f,            // A-1
-  14.5676175474403f, // Bb-1
-  15.4338531642538f, // B-1
-  16.3515978312874f, // C0
-  17.3239144360545f, // Db0
-  18.6540479948379f, // D0
-  19.44543648263f,   // Eb0
-  20.6017223070543f, // E0
-  21.8567644645627f, // F0
-  23.1246514194771f, // Gb0
-  24.4997147488593f, // G0
-  25.9565435987465f, // Ab0
-  27.5f,             // A0 (Piano low A)
-  29.1352350948806f, // Bb0
-  30.8677063285077f, // B0 (5-string bass low open B)
-  32.7031956625748f, // C1
-  34.6478288721089f, // Db1
-  36.7080959896759f, // D1
-  38.89087296526f,   // Eb1
-  41.2034446141087f, // E1 (4-string bass low open E)
-  43.6535289291254f, // F1
-  46.2493028389542f, // Gb1
-  48.9994294977186f, // G1
-  51.913087197493f,  // Ab1
-  55.f,              // A1
-  58.2704701897611f, // B1
-  61.7354126570154f, // B1
-  65.4063913251495f, // C2
-  69.2956577442179f, // Db2
-  73.4161919793518f, // D2
-  77.7817459305201f, // Eb2
-  82.4068892282174f, // E2 (Guitar low open E)
-  87.3070578582508f, // F2
-  92.4986056779085f, // Gb2
-  97.9988589954372f, // G2 (4 or 5 string bass, high open G)
-  103.826174394986f, // Ab2
-  110.f,             // A2 (Guitar 5th string open)
-  116.540940379522f, // Bb2
-  123.470825314031f, // B2
-  130.812782650299f, // C3 (6-string bass, high open C)
-  138.591315488436f, // Db3
-  146.832383958704f, // D3 (Guitar 4th string open)
-  155.56349186104f,  // Eb3
-  164.813778456435f, // E3
-  174.614115716502f, // F3
-  184.997211355817f, // Gb3
-  195.997717990874f, // G3 (Guitar 3rd string open) (Violin low open G)
-  207.652348789972f, // Ab3
-  220.f,             // A3
-  233.081880759045f, // Bb3
-  246.941650628062f, // B3 (Guitar 3rd string open)
-  261.625565300599f, // C4 (Piano middle C)
-  277.182630976872f, // Db4
-  293.664767917407f, // D4 (Violin 3rd string open)
-  311.126983722081f, // Eb4
-  329.62755691287f,  // E4 (Guitar 1st string open)
-  349.228231433004f, // F4
-  369.994422711634f, // Gb4
-  391.995435981749f, // G4
-  415.304697579945f, // Ab4
-  440.f,             // A4 (Tuning fork A) (Violin 2nd string open)
-  466.16376151809f,  // Bb4
-  493.883301256124f, // B4
-  523.251130601197f, // C5
-  554.365261953744f, // Db5
-  587.329535834815f, // D5
-  622.253967444162f, // Eb5
-  659.25511382574f,  // E5 (Guitar 1st string 12 fret) (Violin 1st string open)
-  698.456462866008f, // F5
-  739.988845423269f, // Gb5
-  783.990871963499f, // G5
-  830.609395159891f, // Ab5
-  880.f,             // A5
-  932.32752303618f,  // Bb5
-  987.766602512249f, // B5
-  1046.50226120239f, // C6
-  1108.73052390749f, // Db6
-  1174.65907166963f, // D6
-  1244.50793488832f, // Eb6
-  1318.51022765148f, // E6 (Guitar 1st string 24 fret)
-  1396.91292573202f, // F6
-  1479.97769084654f, // Gb6
-  1567.981743927f,   // G6
-  1661.21879031978f, // Ab6
-  1760.f,            // A6
-  1864.65504607236f, // Bb6
-  1975.5332050245f,  // B6
-  2093.00452240479f, // C7
-  2217.46104781498f, // Db7
-  2349.31814333926f, // D7
-  2489.01586977665f, // Eb7
-  2637.02045530296f, // E7
-  2793.82585146403f, // F7
-  2959.95538169308f, // Gb7
-  3135.963487854f,   // G7
-  3322.43758063956f, // Ab7
-  3520.f,            // A7
-  3729.31009214472f, // Bb7
-  3951.066410049f,   // B7
-  4186.00904480958f, // C8 (Piano upper C)
-  4434.92209562996f, // Db8
-  4698.63628667853f, // D8
-  4978.0317395533f,  // Eb8
-  5274.04091060593f, // E8
-  5587.65170292807f, // F8
-  5919.91076338616f, // Gb8
-  6271.926975708f,   // G8
-  6644.87516127913f, // Ab8
-  7040.00000000001f, // A8
-  7458.62018428945f, // Bb8
-  7902.132820098f,   // B8
-  8372.01808961917f, // C9
-  8869.84419125992f, // Db9
-  9397.27257335706f, // D9
-  9956.06347910661f, // Eb9
-  10548.0818212119f, // E9
-  11175.3034058561f, // F9
-  11839.8215267723f, // Gb9
-  12543.853951416f,  // G9 (Last MIDI note)
+static f64 imp_note_freqs[] = {
+  8.17579891564368, // C-1 (First MIDI note)
+  8.66195721802722, // Db-1
+  9.17702399741896, // D-1
+  9.722718241315,   // Eb-1
+  10.3008611535272, // E-1
+  10.9133822322813, // F-1
+  11.5623257097385, // Gb-1
+  12.2498573744296, // G-1
+  12.9782717993732, // Ab-1
+  13.75,            // A-1
+  14.5676175474403, // Bb-1
+  15.4338531642538, // B-1
+  16.3515978312874, // C0
+  17.3239144360545, // Db0
+  18.6540479948379, // D0
+  19.44543648263,   // Eb0
+  20.6017223070543, // E0
+  21.8567644645627, // F0
+  23.1246514194771, // Gb0
+  24.4997147488593, // G0
+  25.9565435987465, // Ab0
+  27.5,             // A0 (Piano low A)
+  29.1352350948806, // Bb0
+  30.8677063285077, // B0 (5-string bass low open B)
+  32.7031956625748, // C1
+  34.6478288721089, // Db1
+  36.7080959896759, // D1
+  38.89087296526,   // Eb1
+  41.2034446141087, // E1 (4-string bass low open E)
+  43.6535289291254, // F1
+  46.2493028389542, // Gb1
+  48.9994294977186, // G1
+  51.913087197493,  // Ab1
+  55.,              // A1
+  58.2704701897611, // B1
+  61.7354126570154, // B1
+  65.4063913251495, // C2
+  69.2956577442179, // Db2
+  73.4161919793518, // D2
+  77.7817459305201, // Eb2
+  82.4068892282174, // E2 (Guitar low open E)
+  87.3070578582508, // F2
+  92.4986056779085, // Gb2
+  97.9988589954372, // G2 (4 or 5 string bass, high open G)
+  103.826174394986, // Ab2
+  110.,             // A2 (Guitar 5th string open)
+  116.540940379522, // Bb2
+  123.470825314031, // B2
+  130.812782650299, // C3 (6-string bass, high open C)
+  138.591315488436, // Db3
+  146.832383958704, // D3 (Guitar 4th string open)
+  155.56349186104,  // Eb3
+  164.813778456435, // E3
+  174.614115716502, // F3
+  184.997211355817, // Gb3
+  195.997717990874, // G3 (Guitar 3rd string open) (Violin low open G)
+  207.652348789972, // Ab3
+  220.,             // A3
+  233.081880759045, // Bb3
+  246.941650628062, // B3 (Guitar 3rd string open)
+  261.625565300599, // C4 (Piano middle C)
+  277.182630976872, // Db4
+  293.664767917407, // D4 (Violin 3rd string open)
+  311.126983722081, // Eb4
+  329.62755691287,  // E4 (Guitar 1st string open)
+  349.228231433004, // F4
+  369.994422711634, // Gb4
+  391.995435981749, // G4
+  415.304697579945, // Ab4
+  440.,             // A4 (Tuning fork A) (Violin 2nd string open)
+  466.16376151809,  // Bb4
+  493.883301256124, // B4
+  523.251130601197, // C5
+  554.365261953744, // Db5
+  587.329535834815, // D5
+  622.253967444162, // Eb5
+  659.25511382574,  // E5 (Guitar 1st string 12 fret) (Violin 1st string open)
+  698.456462866008, // F5
+  739.988845423269, // Gb5
+  783.990871963499, // G5
+  830.609395159891, // Ab5
+  880.,             // A5
+  932.32752303618,  // Bb5
+  987.766602512249, // B5
+  1046.50226120239, // C6
+  1108.73052390749, // Db6
+  1174.65907166963, // D6
+  1244.50793488832, // Eb6
+  1318.51022765148, // E6 (Guitar 1st string 24 fret)
+  1396.91292573202, // F6
+  1479.97769084654, // Gb6
+  1567.981743927,   // G6
+  1661.21879031978, // Ab6
+  1760.,            // A6
+  1864.65504607236, // Bb6
+  1975.5332050245,  // B6
+  2093.00452240479, // C7
+  2217.46104781498, // Db7
+  2349.31814333926, // D7
+  2489.01586977665, // Eb7
+  2637.02045530296, // E7
+  2793.82585146403, // F7
+  2959.95538169308, // Gb7
+  3135.963487854,   // G7
+  3322.43758063956, // Ab7
+  3520.,            // A7
+  3729.31009214472, // Bb7
+  3951.066410049,   // B7
+  4186.00904480958, // C8 (Piano upper C)
+  4434.92209562996, // Db8
+  4698.63628667853, // D8
+  4978.0317395533,  // Eb8
+  5274.04091060593, // E8
+  5587.65170292807, // F8
+  5919.91076338616, // Gb8
+  6271.926975708,   // G8
+  6644.87516127913, // Ab8
+  7040.00000000001, // A8
+  7458.62018428945, // Bb8
+  7902.132820098,   // B8
+  8372.01808961917, // C9
+  8869.84419125992, // Db9
+  9397.27257335706, // D9
+  9956.06347910661, // Eb9
+  10548.0818212119, // E9
+  11175.3034058561, // F9
+  11839.8215267723, // Gb9
+  12543.853951416,  // G9 (Last MIDI note)
 };
 
 // Enums //////////////////////////////////////////////////////////////////////
@@ -280,7 +280,7 @@ struct imp_instrument_instance {
 };
 
 struct imp_song {
-  f32 bpm;
+  f64 bpm;
   // u8 *form;
   imp_instrument_instance* instrument_instances;
   f64 time_scale;
@@ -310,7 +310,7 @@ scale_rel_ix(imp_scale scale, u8 scale_root, u8 note, u8* scale_ix, s8* offset)
   s8 scale_note = (note + 12 - scale_root) % 12;
   *offset = 100; // init with unreasonably high offset
   for (u32 i = 0; i != scale.size; ++i) {
-    s8 curr_offset = (s8)scale.ixs[i] - scale_note;
+    s8 curr_offset = s8(scale.ixs[i]) - scale_note;
     if (curr_offset == 0) {
       *offset = 0;
       *scale_ix = i;
@@ -381,16 +381,16 @@ pcmreadcallback(FMOD_SOUND* sound, void* data, u32 datalen)
   imp_song& song = *song_ptr;
 
   // Fill sound buffer
-  s16* stereo16bitbuffer = (s16*)data;
+  s16* stereo16bitbuffer = static_cast<s16*>(data);
   for (u32 count = 0; count < (datalen >> 2);
        count++) // >>2 = 4 bytes per sample (16bit stereo)
   {
-    f32 amplitude_sum = 0;
+    f64 amplitude_sum = .0;
     f64 dt = IMP_INV_SAMPLE_FREQ * song.time_scale;
 
     // update song
 
-    for (int instrument_instance_ix = 0;
+    for (size_t instrument_instance_ix = 0;
          instrument_instance_ix < IMP_NUM_INSTRUMENT_INSTANCES;
          ++instrument_instance_ix) {
       // Get active instrument instance
@@ -412,8 +412,8 @@ pcmreadcallback(FMOD_SOUND* sound, void* data, u32 datalen)
           // Generate future events from plan
 
           u8 note = imp_note(
-            (IMP_NOTE)scale_rand(scale, scale_root),
-            (IMP_OCTAVE)(IMP_OCTAVE_MINUS_1 + rand() % 2));
+            IMP_NOTE(scale_rand(scale, scale_root)),
+            IMP_OCTAVE(IMP_OCTAVE_MINUS_1 + rand() % 2));
           u8 subdiv1 = pow(2, rand() % 2); // ∈ { 1, 2 }
           for (u32 i = 0; i < subdiv1; ++i) {
             u8 subdiv2 = pow(2, rand() % 4); // ∈ { 1, 2, 4, 8 }
@@ -443,10 +443,10 @@ pcmreadcallback(FMOD_SOUND* sound, void* data, u32 datalen)
         u8 event = events.read();
 
         if (event == IMP_EVENT_TYPE_STRIKE) {
-          f32 freq = imp_note_freqs[events.read()];
+          f64 freq = imp_note_freqs[events.read()];
           u8 wait = events.read();
           u8 div = events.read();
-          f32 duration = 60.f * (wait * 4.f / div) / song.bpm;
+          f64 duration = 60. * (wait * 4. / div) / song.bpm;
 
           std::find_if(
             synth.voices,
@@ -459,10 +459,10 @@ pcmreadcallback(FMOD_SOUND* sound, void* data, u32 datalen)
           instrument_instance.e_countdown = duration;
         }
         else if (event == IMP_EVENT_TYPE_SLIDE) {
-          f32 freq = imp_note_freqs[events.read()];
+          f64 freq = imp_note_freqs[events.read()];
           u8 wait = events.read();
           u8 div = events.read();
-          f32 duration = 60.f * (wait * 4.f / div) / song.bpm;
+          f64 duration = 60. * (wait * 4. / div) / song.bpm;
 
           std::find_if(
             synth.voices,
@@ -470,12 +470,12 @@ pcmreadcallback(FMOD_SOUND* sound, void* data, u32 datalen)
             [](const Voice& voice) {
               return voice.has_state(Voice::State::Off);
             })
-            ->strike(freq, song.time, duration / 4, Interpolation::Linear);
+            ->strike(freq, song.time, duration / 4., Interpolation::Linear);
 
           instrument_instance.e_countdown = duration;
         }
         else if (event == IMP_EVENT_TYPE_RELEASE) {
-          f32 freq = imp_note_freqs[events.read()];
+          f64 freq = imp_note_freqs[events.read()];
           std::find_if(
             synth.voices,
             synth.voices + Synth::NUM_VOICES,
@@ -488,8 +488,8 @@ pcmreadcallback(FMOD_SOUND* sound, void* data, u32 datalen)
         else if (event == IMP_EVENT_TYPE_WAIT) {
           u8 wait = events.read();
           u8 div = events.read();
-          f32 beats_wait = wait * 4.f / div;
-          instrument_instance.e_countdown = 60.f * beats_wait / song.bpm;
+          f64 beats_wait = wait * 4. / div;
+          instrument_instance.e_countdown = 60. * beats_wait / song.bpm;
         }
       }
 
@@ -511,7 +511,7 @@ pcmreadcallback(FMOD_SOUND* sound, void* data, u32 datalen)
 
       // Update oscillator
       synth.lfo += dt;
-      if (synth.lfo >= 1.f) {
+      if (synth.lfo >= 1.) {
         --synth.lfo;
       }
     }
@@ -519,25 +519,25 @@ pcmreadcallback(FMOD_SOUND* sound, void* data, u32 datalen)
     song.time += dt;
     song.absolute_time += IMP_INV_SAMPLE_FREQ;
 
-    f32 time_lerp_start_time = 100.f;
-    f32 time_lerp_duration = 3.f;
+    f64 time_lerp_start_time = 100.;
+    f64 time_lerp_duration = 3.;
     if (song.absolute_time > time_lerp_start_time) {
-      f32 t = (song.absolute_time - time_lerp_start_time) / time_lerp_duration;
-      song.time_scale = cerp(1.f, 0.f, min(t, 1.f));
+      f64 t = (song.absolute_time - time_lerp_start_time) / time_lerp_duration;
+      song.time_scale = cerp(1., .0, min(t, 1.));
     }
 
     // Clamp amplitude
-    if (amplitude_sum >= 1.f) {
-      amplitude_sum = 1.f;
-      puts("clip+");
+    if (amplitude_sum >= 1.) {
+      amplitude_sum = 1.;
+      std::cout << "clip+" << std::endl;
     }
-    else if (amplitude_sum <= -1.f) {
-      amplitude_sum = -1.f;
-      puts("clip-");
+    else if (amplitude_sum <= -1.) {
+      amplitude_sum = -1.;
+      std::cout << "clip-" << std::endl;
     }
 
     // Write channel data
-    s16 val = (s16)(amplitude_sum * 32767.f);
+    s16 val = s16(amplitude_sum * 32767.);
     *stereo16bitbuffer++ = val; // left channel
     *stereo16bitbuffer++ = val; // right channel
   }
@@ -570,14 +570,14 @@ s32 main2()
   std::cin >> seed;
   srand(seed);
 
-  auto sine_wavetable = {1.f};
+  auto sine_wavetable = {1.};
   auto violin_wavetable = {
-    1.f, .75f, .65f, .55f, .5f, .45f, .4f, .35f, .3f, .25f, .25f, .2f};
+    1., .75, .65, .55, .5, .45, .4, .35, .3, .25, .25, .2};
   auto random_wavetable = ([]() {
-    std::vector<f32> harmonics;
+    std::vector<f64> harmonics;
     for (u32 i = 0; i != 32; ++i) {
-      f32 div = f32(i + 1);
-      harmonics.push_back(f32(1 + (rand() % 5)) / (div * div));
+      f64 div = i + 1;
+      harmonics.push_back(f64(1 + (rand() % 5)) / (div * div));
     }
     return HarmonicsWavetable(harmonics);
   })();
@@ -586,16 +586,16 @@ s32 main2()
   Synth synths[IMP_NUM_SYNTHS] = {0};
   for (s32 i = 0; i != IMP_NUM_SYNTHS; ++i) {
     for (u32 j = 0; j < Synth::NUM_VOICES; ++j) {
-      synths[i].voices[j].vol = .25f;
+      synths[i].voices[j].vol = .25;
     }
     synths[i].wavetable = random_wavetable;
-    synths[i].adsr_params.attack_duration = .068f;
-    synths[i].adsr_params.decay_duration = .014f;
-    synths[i].adsr_params.release_duration = .045f;
-    synths[i].adsr_params.attack_amplitude = .7f;
-    synths[i].adsr_params.sustain_amplitude = .5f;
-    synths[i].vibrato.amp = 0.5f;
-    synths[i].vibrato.freq = 3.f;
+    synths[i].adsr_params.attack_duration = .068;
+    synths[i].adsr_params.decay_duration = .014;
+    synths[i].adsr_params.release_duration = .045;
+    synths[i].adsr_params.attack_amplitude = .7;
+    synths[i].adsr_params.sustain_amplitude = .5;
+    synths[i].vibrato.amp = .5;
+    synths[i].vibrato.freq = 3.;
   }
 
   // Setup scales
@@ -650,11 +650,11 @@ s32 main2()
   // Setup song
   imp_song song;
   {
-    song.bpm = 130;
+    song.bpm = 130.;
     song.instrument_instances = instrument_instances;
-    song.time_scale = 1.f;
-    song.time = 0.f;
-    song.absolute_time = 0.f;
+    song.time_scale = 1.;
+    song.time = .0;
+    song.absolute_time = .0;
   }
 
   // Init FMOD
@@ -709,17 +709,17 @@ s32 main2()
   std::chrono::
     time_point<std::chrono::high_resolution_clock, std::chrono::nanoseconds>
       t, t0 = std::chrono::high_resolution_clock::now();
-  f32 dt, prev_elapsed, elapsed = 0.f;
+  f64 dt, prev_elapsed, elapsed = .0;
 
   bool isPlaying = true;
-  while (isPlaying && song.time_scale > FLT_EPSILON) {
+  while (isPlaying && song.time_scale > DBL_EPSILON) {
     // time
     {
       t = std::chrono::high_resolution_clock::now();
       prev_elapsed = elapsed;
       elapsed =
         std::chrono::duration_cast<std::chrono::milliseconds>(t - t0).count() /
-        1000.f;
+        1000.;
       dt = elapsed - prev_elapsed;
     }
 

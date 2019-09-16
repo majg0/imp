@@ -10,17 +10,17 @@
 class HarmonicsWavetable {
 public:
   HarmonicsWavetable() {}
-  HarmonicsWavetable(std::vector<f32> harmonics) { fill(harmonics); }
-  HarmonicsWavetable(std::initializer_list<f32> harmonics) { fill(harmonics); }
+  HarmonicsWavetable(std::vector<f64> harmonics) { fill(harmonics); }
+  HarmonicsWavetable(std::initializer_list<f64> harmonics) { fill(harmonics); }
 
-  void fill(std::vector<f32> harmonics)
+  void fill(std::vector<f64> harmonics)
   {
     // Precompute harmonics normalization factor n
-    f32 n = 0.f;
-    for (f32 amplitude : harmonics) {
+    f64 n = 0.;
+    for (f64 amplitude : harmonics) {
       n += amplitude;
     }
-    n = 1.f / n;
+    n = 1. / n;
 
     auto N = harmonics.size();
 
@@ -32,13 +32,10 @@ public:
     }
   }
 
-  const f32 sample(f32 t) const
+  const f64 sample(const f64 t) const
   {
-    while (t >= 1.f) {
-      t -= 1.f;
-    }
-    f32 ixf = t * BUF_SIZE;
-    u32 ix = ((u32)ixf) % BUF_SIZE;
+    const f64 ixf = (t - u32(t)) * BUF_SIZE;
+    const u32 ix = u32(ixf) % BUF_SIZE;
     return lerp(buffer[ix], buffer[(ix + 1) % BUF_SIZE], ixf - ix);
   }
 
@@ -48,7 +45,7 @@ public:
     constexpr static int width = 130;
     for (int k = 0; k != height; ++k) {
       for (int i = width - 1; i != 0; --i) {
-        f32 val = .5f + .5f * sample(f32(i) / f32(width));
+        f64 val = .5 + .5 * sample(f64(i) / f64(width));
 
         if (val * height >= k && val * height < k + 1) {
           std::cout << "x";
@@ -63,9 +60,9 @@ public:
 
 private:
   constexpr static size_t BUF_SIZE = 1024;
-  constexpr static f32 C = TWOPIF / (f32)BUF_SIZE;
+  constexpr static f64 C = TWOPI / BUF_SIZE;
 
-  f32 buffer[BUF_SIZE] = {0};
+  f64 buffer[BUF_SIZE] = {0};
 };
 
 #endif

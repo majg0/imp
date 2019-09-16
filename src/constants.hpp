@@ -24,14 +24,13 @@ typedef double f64;
 
 // Static data ////////////////////////////////////////////////////////////////
 
-constexpr f32 IMP_SAMPLE_FREQ = 44100.f;
-constexpr f32 IMP_INV_SAMPLE_FREQ = .000022675736961451248f;
+constexpr f64 IMP_SAMPLE_FREQ = 44100.;
+constexpr f64 IMP_INV_SAMPLE_FREQ = 1. / IMP_SAMPLE_FREQ;
 
 constexpr size_t IMP_NUM_SYNTHS = 16;
 constexpr size_t IMP_NUM_INSTRUMENT_INSTANCES = 64;
 
 constexpr f64 PI = 3.14159265359;
 constexpr f64 TWOPI = 6.283185307179586476925286766559;
-constexpr f32 TWOPIF = 6.283185307179586476925286766559f;
 
 #endif

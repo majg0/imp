@@ -4,9 +4,9 @@
 #include "synth.hpp"
 
 void Voice::strike(
-  const f32 frequency,
-  const f32 current_time,
-  const f32 interpolation_duration,
+  const f64 frequency,
+  const f64 current_time,
+  const f64 interpolation_duration,
   const Interpolation interpolation)
 {
   target_frequency = frequency;
@@ -16,7 +16,7 @@ void Voice::strike(
   state = State::On;
 }
 
-void Voice::release(const Synth& synth, const f32 current_time)
+void Voice::release(const Synth& synth, const f64 current_time)
 {
   // Calculate current adsr release volume (if still in attack / decay phase, a
   // sudden jump down to sustain level would cause an audible discontinuity)
@@ -26,16 +26,16 @@ void Voice::release(const Synth& synth, const f32 current_time)
 }
 
 void Voice::proceed_phase(
-  const Synth& synth, const f32 current_time, const f32 dt)
+  const Synth& synth, const f64 current_time, const f64 dt)
 {
   phase += dt *
-    (synth.vibrato.amp * sin(TWOPIF * synth.lfo * synth.vibrato.freq) +
+    (synth.vibrato.amp * sin(TWOPI * synth.lfo * synth.vibrato.freq) +
      get_frequency(current_time));
 
-  if (phase < 0.f) {
+  if (phase < .0) {
     ++phase;
   }
-  else if (phase >= 1.f) {
+  else if (phase >= 1.) {
     --phase;
   }
 
@@ -46,7 +46,7 @@ void Voice::proceed_phase(
   }
 }
 
-const f32 Voice::get_frequency(const f32 song_time) const
+const f64 Voice::get_frequency(const f64 song_time) const
 {
   return interpolate(
     last_frequency,
@@ -59,14 +59,14 @@ const bool Voice::has_state(const State target_state) const
 {
   return state == target_state;
 }
-const bool Voice::has_target_frequency(const f32 frequency) const
+const bool Voice::has_target_frequency(const f64 frequency) const
 {
   return frequency == target_frequency;
 }
 
-const f32 Voice::sample(const Synth& synth, const f32 song_time) const
+const f64 Voice::sample(const Synth& synth, const f64 song_time) const
 {
-  const f32 adsr = synth.adsr_params.sample(
+  const f64 adsr = synth.adsr_params.sample(
     state, last_strike_time, last_release_time, song_time);
   return adsr * vol * synth.wavetable.sample(phase);
 }

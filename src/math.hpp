@@ -15,14 +15,14 @@ inline T min(T a, T b)
   return a < b ? a : b;
 }
 
-inline const f32 lerp(const f32 a, const f32 b, const f32 t)
+inline const f64 lerp(const f64 a, const f64 b, const f64 t)
 {
-  return (1.f - t) * a + t * b; // precise lerp
+  return (1. - t) * a + t * b; // precise lerp
 }
 
-inline const f32 cerp(const f32 a, const f32 b, const f32 t)
+inline const f64 cerp(const f64 a, const f64 b, const f64 t)
 {
-  return lerp(a, b, .5f - cos(t * PI) * .5f);
+  return lerp(a, b, .5 - cos(t * PI) * .5);
 }
 
 template <typename T>
@@ -55,8 +55,8 @@ enum class Interpolation {
   Cosine,
 };
 
-inline const f32 interpolate(
-  const f32 a, const f32 b, const f32 t, const Interpolation interpolation)
+inline const f64 interpolate(
+  const f64 a, const f64 b, const f64 t, const Interpolation interpolation)
 {
   switch (interpolation) {
   case Interpolation::None:
@@ -70,10 +70,10 @@ inline const f32 interpolate(
   }
 }
 
-// inline f32 lerp_array(f32 *values, u32 size, f32 t)
+// inline f64 lerp_array(f64 *values, u32 size, f64 t)
 // {
-//   f32 ixf = t * size;
-//   u32 ix = (u32)ixf;
+//   f64 ixf = t * size;
+//   u32 ix = u32(ixf);
 //   u32 max_ix = size - 1;
 //   return lerp(values[min(ix, max_ix)], values[min(ix + 1, max_ix)], ixf -
 //   ix);
