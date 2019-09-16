@@ -19,7 +19,7 @@ struct Synth;
 
 class Voice {
 public:
-  enum State { Off, On, Releasing }; // TODO (feat): remove Releasing?
+  enum class State { Off, On, Releasing }; // TODO (feat): remove Releasing?
 
   f32 phase = 0;
   f32 vol = 0;
@@ -40,11 +40,11 @@ public:
 private:
   const f32 get_frequency(const f32 song_time) const;
 
-  State state = Off;
+  State state = State::Off;
   f32 last_strike_time = 0;                 // TODO (feat): seconds type
   f32 last_release_time = 0;                // TODO (feat): seconds type
   f32 frequency_interpolation_duration = 0; // TODO (feat): seconds type
-  Interpolation frequency_interpolation = Direct;
+  Interpolation frequency_interpolation = Interpolation::None;
   f32 last_frequency = 0;   // TODO (feat): frequency type
   f32 target_frequency = 0; // TODO (feat): frequency type
   // InterpolatedValue<f32> frequency;

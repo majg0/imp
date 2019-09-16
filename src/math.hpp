@@ -49,8 +49,8 @@ inline const T clamp(const T a, const T b, const T val)
   return val;
 }
 
-enum Interpolation {
-  Direct,
+enum class Interpolation {
+  None,
   Linear,
   Cosine,
 };
@@ -59,11 +59,11 @@ inline const f32 interpolate(
   const f32 a, const f32 b, const f32 t, const Interpolation interpolation)
 {
   switch (interpolation) {
-  case Direct:
+  case Interpolation::None:
     return b;
-  case Linear:
+  case Interpolation::Linear:
     return clamp(a, b, lerp(a, b, t));
-  case Cosine:
+  case Interpolation::Cosine:
     return clamp(a, b, cerp(a, b, t));
   default:
     throw "unsupported Interpolation";

@@ -13,7 +13,7 @@ void Voice::strike(
   last_strike_time = current_time;
   frequency_interpolation_duration = interpolation_duration;
   frequency_interpolation = interpolation;
-  state = On;
+  state = State::On;
 }
 
 void Voice::release(const Synth& synth, const f32 current_time)
@@ -22,7 +22,7 @@ void Voice::release(const Synth& synth, const f32 current_time)
   // sudden jump down to sustain level would cause an audible discontinuity)
   last_frequency = get_frequency(current_time);
   last_release_time = current_time;
-  state = Releasing;
+  state = State::Releasing;
 }
 
 void Voice::proceed_phase(
@@ -40,9 +40,9 @@ void Voice::proceed_phase(
   }
 
   if (
-    has_state(Voice::Releasing) &&
+    has_state(State::Releasing) &&
     (current_time - last_release_time) > synth.adsr_params.release_duration) {
-    state = Voice::Off;
+    state = State::Off;
   }
 }
 

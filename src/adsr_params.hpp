@@ -15,9 +15,9 @@ struct AdsrParams {
   f32 attack_amplitude = 0;
   f32 sustain_amplitude = 0;
 
-  Interpolation attack_interpolation = Cosine;
-  Interpolation decay_interpolation = Cosine;
-  Interpolation release_interpolation = Cosine;
+  Interpolation attack_interpolation = Interpolation::Cosine;
+  Interpolation decay_interpolation = Interpolation::Cosine;
+  Interpolation release_interpolation = Interpolation::Cosine;
 
   const f32 sample(
     const Voice::State state,
@@ -26,11 +26,11 @@ struct AdsrParams {
     const f32 song_time) const
   {
 
-    if (state == Voice::Off) {
+    if (state == Voice::State::Off) {
       return 0.f;
     }
 
-    if (state == Voice::On) {
+    if (state == Voice::State::On) {
       f32 duration = song_time - last_strike_time;
       if (duration < attack_duration) {
         return interpolate(
@@ -49,11 +49,14 @@ struct AdsrParams {
       return sustain_amplitude;
     }
 
-    if (state == Voice::Releasing) {
+    if (state == Voice::State::Releasing) {
       f32 duration = song_time - last_release_time;
       if (duration < release_duration) {
         f32 adsr_release_amount = sample(
-          Voice::On, last_strike_time, last_release_time, last_release_time);
+          Voice::State::On,
+          last_strike_time,
+          last_release_time,
+          last_release_time);
         return interpolate(
           adsr_release_amount,
           0.f,

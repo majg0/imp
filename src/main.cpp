@@ -451,8 +451,10 @@ pcmreadcallback(FMOD_SOUND* sound, void* data, u32 datalen)
           std::find_if(
             synth.voices,
             synth.voices + Synth::NUM_VOICES,
-            [](const Voice& voice) { return voice.has_state(Voice::Off); })
-            ->strike(freq, song.time, duration, Direct);
+            [](const Voice& voice) {
+              return voice.has_state(Voice::State::Off);
+            })
+            ->strike(freq, song.time, duration, Interpolation::None);
 
           instrument_instance.e_countdown = duration;
         }
@@ -465,8 +467,10 @@ pcmreadcallback(FMOD_SOUND* sound, void* data, u32 datalen)
           std::find_if(
             synth.voices,
             synth.voices + Synth::NUM_VOICES,
-            [](const Voice& voice) { return voice.has_state(Voice::Off); })
-            ->strike(freq, song.time, duration / 4, Linear);
+            [](const Voice& voice) {
+              return voice.has_state(Voice::State::Off);
+            })
+            ->strike(freq, song.time, duration / 4, Interpolation::Linear);
 
           instrument_instance.e_countdown = duration;
         }
@@ -476,7 +480,7 @@ pcmreadcallback(FMOD_SOUND* sound, void* data, u32 datalen)
             synth.voices,
             synth.voices + Synth::NUM_VOICES,
             [freq](const Voice& voice) {
-              return voice.has_state(Voice::On) &&
+              return voice.has_state(Voice::State::On) &&
                 voice.has_target_frequency(freq);
             })
             ->release(synth, song.time);
@@ -496,7 +500,7 @@ pcmreadcallback(FMOD_SOUND* sound, void* data, u32 datalen)
       for (u32 i = 0; i < Synth::NUM_VOICES; ++i) {
         // Get active voice
         Voice& voice = synth.voices[i];
-        if (voice.has_state(Voice::Off)) {
+        if (voice.has_state(Voice::State::Off)) {
           continue;
         }
 
