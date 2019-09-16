@@ -14,9 +14,8 @@ struct Context;
 
 class IGraphNode {
 public:
-  // TODO pass Context instead of Graph
-  virtual const f64
-  sample(const Graph& graph, const f64 input, const u8 num_inputs) const = 0;
+  using Inputs = std::vector<IGraphNode*>;
+  virtual const f64 sample(const Graph& graph, const Inputs& inputs) const = 0;
   virtual void on_tick(const Timing& timing) = 0;
 };
 
@@ -33,12 +32,7 @@ public:
 
   const f64 sample(const Node& sink) const
   {
-    const auto& sources = map.at(const_cast<Node* const>(&sink));
-    f64 sum = .0;
-    for (const Node* const node : sources) {
-      sum += sample(*node);
-    }
-    return sink.sample(*this, sum, sources.size());
+    return sink.sample(*this, map.at(const_cast<Node* const>(&sink)));
   }
 
   void connect(const Node& source, const Node& sink)
@@ -93,15 +87,16 @@ private:
   f64 absolute_time = .0;
   f64 scaled_time = .0;
   f64 scaled_delta_time = INVERSE_SAMPLE_FREQUENCY;
-  f64 time_scale = 1.; // TODO interpolatable
+  f64 time_scale = 1.; // TODO (feat): interpolatable
 };
 
 class Oscillator : public IGraphNode {
 public:
   Oscillator(const f64 frequency) : frequency(frequency) {}
 
-  const f64 sample(const Graph&, const f64, const u8) const
+  const f64 sample(const Graph&, const Inputs&) const
   {
+    // TODO (feat): more waveform types
     return sin(frequency * phase * TWOPI);
   }
 
@@ -122,8 +117,12 @@ class Gain : public IGraphNode {
 public:
   Gain(f64 gain) : gain(gain) {}
 
-  const f64 sample(const Graph& graph, const f64 input, const u8) const
+  const f64 sample(const Graph& graph, const Inputs& inputs) const
   {
+    f64 input = .0;
+    for (const auto* node : inputs) {
+      input += graph.sample(*node);
+    }
     return input * gain;
   }
 

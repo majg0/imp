@@ -295,7 +295,6 @@ inline u8 imp_note(IMP_NOTE note, IMP_OCTAVE octave)
   return octave * 12 + note;
 }
 
-// TODO prefix with imp_
 // TODO scale_rel_ix_up / scale_rel_ix_down instead, like in ground ??
 /// Find relative index in scale
 /// example:

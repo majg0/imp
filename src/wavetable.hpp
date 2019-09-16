@@ -16,7 +16,7 @@ public:
   void fill(std::vector<f64> harmonics)
   {
     // Precompute harmonics normalization factor n
-    f64 n = 0.;
+    f64 n = .0;
     for (f64 amplitude : harmonics) {
       n += amplitude;
     }
