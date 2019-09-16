@@ -79,14 +79,4 @@ inline const f32 interpolate(
 //   ix);
 // }
 
-inline const f32 lerp_array_circular(const f32* values, const u32 size, f32 t)
-{
-  while (t >= 1.f) {
-    t -= 1.f;
-  }
-  f32 ixf = t * size;
-  u32 ix = ((u32)ixf) % size;
-  return lerp(values[ix], values[(ix + 1) % size], ixf - ix);
-}
-
 #endif

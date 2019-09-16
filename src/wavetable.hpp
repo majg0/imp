@@ -32,9 +32,14 @@ public:
     }
   }
 
-  const f32 sample(const f32 t) const
+  const f32 sample(f32 t) const
   {
-    return lerp_array_circular(buffer, BUF_SIZE, t);
+    while (t >= 1.f) {
+      t -= 1.f;
+    }
+    f32 ixf = t * BUF_SIZE;
+    u32 ix = ((u32)ixf) % BUF_SIZE;
+    return lerp(buffer[ix], buffer[(ix + 1) % BUF_SIZE], ixf - ix);
   }
 
   void dbg_print()
