@@ -6,23 +6,9 @@
 
 struct Synth;
 
-// TODO ?
-// template<typename T>
-// struct InterpolatedValue {
-//   T last_value;
-//   T target_value;
-//   Interpolation interpolation;
-//   f32 interpolation_duration; // TODO (feat): seconds type or STL type?
-//   f32 start_time;
-//   f32 prev_start_time;
-// };
-
 class Voice {
 public:
   enum class State { Off, On, Releasing }; // TODO (feat): remove Releasing?
-
-  f64 phase = 0;
-  f64 vol = 0;
 
   void strike(
     const f64 frequency,
@@ -48,6 +34,8 @@ private:
   f64 last_frequency = 0;   // TODO (feat): frequency type
   f64 target_frequency = 0; // TODO (feat): frequency type
   // InterpolatedValue<f64> frequency;
+  f64 phase = 0;
+  f64 vol = .25;
 };
 
 #endif

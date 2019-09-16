@@ -584,10 +584,7 @@ s32 main2()
   // Setup synths
   Synth synths[IMP_NUM_SYNTHS] = {0};
   for (s32 i = 0; i != IMP_NUM_SYNTHS; ++i) {
-    for (u32 j = 0; j < Synth::NUM_VOICES; ++j) {
-      synths[i].voices[j].vol = .25;
-    }
-    synths[i].wavetable = random_wavetable;
+    synths[i].wavetable = violin_wavetable;
     synths[i].adsr_params.attack_duration = .068;
     synths[i].adsr_params.decay_duration = .014;
     synths[i].adsr_params.release_duration = .045;

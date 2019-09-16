@@ -4,29 +4,29 @@
 #include "constants.hpp"
 
 template <typename T>
-inline T max(T a, T b)
+inline T max(T a, T b) noexcept
 {
   return a > b ? a : b;
 }
 
 template <typename T>
-inline T min(T a, T b)
+inline T min(T a, T b) noexcept
 {
   return a < b ? a : b;
 }
 
-inline const f64 lerp(const f64 a, const f64 b, const f64 t)
+inline const f64 lerp(const f64 a, const f64 b, const f64 t) noexcept
 {
   return (1. - t) * a + t * b; // precise lerp
 }
 
-inline const f64 cerp(const f64 a, const f64 b, const f64 t)
+inline const f64 cerp(const f64 a, const f64 b, const f64 t) noexcept
 {
   return lerp(a, b, .5 - cos(t * PI) * .5);
 }
 
 template <typename T>
-inline const T clamp(const T a, const T b, const T val)
+inline const T clamp(const T a, const T b, const T val) noexcept
 {
   // a <= val <= b
   if (a <= b) {
@@ -56,7 +56,10 @@ enum class Interpolation {
 };
 
 inline const f64 interpolate(
-  const f64 a, const f64 b, const f64 t, const Interpolation interpolation)
+  const f64 a,
+  const f64 b,
+  const f64 t,
+  const Interpolation interpolation) noexcept
 {
   switch (interpolation) {
   case Interpolation::None:
