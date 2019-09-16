@@ -29,13 +29,13 @@ public:
     const f32 current_time,
     const f32 interpolation_duration,
     const Interpolation interpolation);
-  void release(const Synth &synth, const f32 current_time);
-  void proceed_phase(const Synth &synth, const f32 current_time, const f32 dt);
+  void release(const Synth& synth, const f32 current_time);
+  void proceed_phase(const Synth& synth, const f32 current_time, const f32 dt);
 
   const bool has_state(const State target_state) const;
   const bool has_target_frequency(const f32 frequency) const;
 
-  const f32 sample(const Synth &synth, const f32 song_time) const;
+  const f32 sample(const Synth& synth, const f32 song_time) const;
 
 private:
   const f32 get_frequency(const f32 song_time) const;
