@@ -1,79 +1,76 @@
 #ifndef IMP_CIRCULAR_RW_BUFFER
 #define IMP_CIRCULAR_RW_BUFFER
 
+#include "constants.hpp"
+
 #include <utility>
 
 class CircularRWBufferBase {
 public:
-  enum ReadError { BufferEmpty };
+  enum class ReadError { BufferEmpty };
 
-  enum WriteError { BufferFull };
+  enum class WriteError { BufferFull };
 
-  enum State { Empty, Normal, Full };
+  enum class State { Empty, Normal, Full };
 };
 
-template <typename T>
 class CircularRWBuffer : CircularRWBufferBase {
 public:
-  template <typename... TArgs>
-  void write(TArgs... datas);
+  template <typename... Args>
+  void write(const Args... datas);
 
-  T read();
+  const u8 read();
 
-  State getState();
+  const State get_state() const;
 
 private:
   static constexpr size_t BUFSIZE = 128;
 
-  void write_impl(T data);
+  void write_impl(const u8 data);
 
-  T buffer[BUFSIZE] = {0};
+  u8 buffer[BUFSIZE] = {0};
   size_t r_ptr_offset = 0;
   size_t w_ptr_offset = 0;
-  State state = Empty;
+  State state = State::Empty;
 };
 
-template <typename T>
-template <typename... TArgs>
-void CircularRWBuffer<T>::write(TArgs... datas)
+template <typename... Args>
+void CircularRWBuffer::write(const Args... datas)
 {
-  (write_impl(std::forward<TArgs>(datas)), ...);
+  (write_impl(std::forward<const Args>(datas)), ...);
 }
 
-template <typename T>
-T CircularRWBuffer<T>::read()
+const u8 CircularRWBuffer::read()
 {
-  if (state == Empty) {
-    throw BufferEmpty;
+  if (state == State::Empty) {
+    throw ReadError::BufferEmpty;
   }
 
-  T result = *(buffer + r_ptr_offset);
+  const u8 result = *(buffer + r_ptr_offset);
 
   if (++r_ptr_offset >= BUFSIZE) {
     r_ptr_offset = 0;
   }
 
   if (r_ptr_offset == w_ptr_offset) {
-    state = Empty;
+    state = State::Empty;
   }
   else {
-    state = Normal;
+    state = State::Normal;
   }
 
   return result;
 }
 
-template <typename T>
-CircularRWBufferBase::State CircularRWBuffer<T>::getState()
+const CircularRWBufferBase::State CircularRWBuffer::get_state() const
 {
   return state;
 }
 
-template <typename T>
-void CircularRWBuffer<T>::write_impl(T data)
+void CircularRWBuffer::write_impl(const u8 data)
 {
-  if (state == Full) {
-    throw BufferFull;
+  if (state == State::Full) {
+    throw WriteError::BufferFull;
   }
 
   *(buffer + w_ptr_offset) = data;
@@ -83,10 +80,10 @@ void CircularRWBuffer<T>::write_impl(T data)
   }
 
   if (w_ptr_offset == r_ptr_offset) {
-    state = Full;
+    state = State::Full;
   }
   else {
-    state = Normal;
+    state = State::Normal;
   }
 }
 

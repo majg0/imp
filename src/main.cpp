@@ -276,7 +276,7 @@ struct imp_instrument_instance {
   imp_scale scale;
   u8 scale_root;
   f64 e_countdown;
-  CircularRWBuffer<u8> queue;
+  CircularRWBuffer queue;
 };
 
 struct imp_song {
@@ -408,7 +408,7 @@ pcmreadcallback(FMOD_SOUND* sound, void* data, u32 datalen)
       while (instrument_instance.e_countdown <= 0) {
         auto& events = instrument_instance.queue;
 
-        if (events.getState() == CircularRWBufferBase::Empty) {
+        if (events.get_state() == CircularRWBufferBase::State::Empty) {
           // Generate future events from plan
 
           u8 note = imp_note(
