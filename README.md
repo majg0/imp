@@ -13,6 +13,40 @@
 
 Now you can run it at `../bin/imp`
 
+## Milestones
+
+1. Proof of concept
+    - [x] basic design
+    - [x] cross compilation
+1. Find the right abstractions
+    - [ ] synth
+    - [ ] composition
+    - [ ] external use
+    - [ ] runtime-configurable
+1. Bindings
+    - [ ] C++
+    - [ ] C#
+    - [ ] JavaScript
+    - [ ] Rust
+    - [ ] Python
+1. Composition
+    - [ ] event format
+    - [ ] idea pool
+    - [ ] dynamics curves
+    - [ ] chord sequences
+    - [ ] analysis and embellishments
+1. Synth
+    - [ ] DSP, FFTs etc
+    - [ ] various generators
+    - [ ] audio graph
+1. Runtime configuration
+    - [ ] CLI tool
+    - [ ] HTTP server + web gui
+1. No dependencies
+    - [ ] Windows
+    - [ ] OSX
+    - [ ] various Unix
+
 ## License
 
 You are bound to whatever the FMOD license says.
