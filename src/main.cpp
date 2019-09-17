@@ -1,9 +1,10 @@
-#include "circular_rw_buffer.hpp"
+#include "composition/circular_rw_buffer.hpp"
 #include "constants.hpp"
-#include "graph.hpp"
-#include "synth.hpp"
-#include "voice.hpp"
-#include "wavetable.hpp"
+#include "synthesis/graph.hpp"
+#include "synthesis/synth.hpp"
+#include "synthesis/voice.hpp"
+#include "synthesis/wavetable.hpp"
+#include "time_state.hpp"
 
 #include <fmod.hpp>
 #include <fmod_errors.h>
@@ -23,6 +24,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
+#include <vector>
 
 // General Defines ////////////////////////////////////////////////////////////
 
@@ -283,9 +285,7 @@ struct imp_song {
   f64 bpm;
   // u8 *form;
   imp_instrument_instance* instrument_instances;
-  f64 time_scale;
-  f64 absolute_time;
-  f64 time;
+  TimeState time_state;
 };
 
 // Helper functions ///////////////////////////////////////////////////////////
@@ -385,7 +385,7 @@ pcmreadcallback(FMOD_SOUND* sound, void* data, u32 datalen)
        count++) // >>2 = 4 bytes per sample (16bit stereo)
   {
     f64 amplitude_sum = .0;
-    f64 dt = IMP_INV_SAMPLE_FREQ * song.time_scale;
+    f64 dt = song.time_state.get_scaled_delta_time();
 
     // update song
 
@@ -453,7 +453,7 @@ pcmreadcallback(FMOD_SOUND* sound, void* data, u32 datalen)
             [](const Voice& voice) {
               return voice.has_state(Voice::State::Off);
             })
-            ->strike(freq, song.time, duration, Interpolation::None);
+            ->strike(freq, song.time_state, duration, Interpolation::None);
 
           instrument_instance.e_countdown = duration;
         }
@@ -469,7 +469,8 @@ pcmreadcallback(FMOD_SOUND* sound, void* data, u32 datalen)
             [](const Voice& voice) {
               return voice.has_state(Voice::State::Off);
             })
-            ->strike(freq, song.time, duration / 4., Interpolation::Linear);
+            ->strike(
+              freq, song.time_state, duration / 4., Interpolation::Linear);
 
           instrument_instance.e_countdown = duration;
         }
@@ -482,7 +483,7 @@ pcmreadcallback(FMOD_SOUND* sound, void* data, u32 datalen)
               return voice.has_state(Voice::State::On) &&
                 voice.has_target_frequency(freq);
             })
-            ->release(synth, song.time);
+            ->release(synth, song.time_state);
         }
         else if (event == IMP_EVENT_TYPE_WAIT) {
           u8 wait = events.read();
@@ -503,9 +504,9 @@ pcmreadcallback(FMOD_SOUND* sound, void* data, u32 datalen)
           continue;
         }
 
-        amplitude_sum += voice.sample(synth, song.time);
+        amplitude_sum += voice.sample(synth, song.time_state);
 
-        voice.proceed_phase(synth, song.time, dt);
+        voice.proceed_phase(synth, song.time_state);
       }
 
       // Update oscillator
@@ -515,14 +516,15 @@ pcmreadcallback(FMOD_SOUND* sound, void* data, u32 datalen)
       }
     }
 
-    song.time += dt;
-    song.absolute_time += IMP_INV_SAMPLE_FREQ;
+    song.time_state.tick();
 
     f64 time_lerp_start_time = 100.;
     f64 time_lerp_duration = 3.;
-    if (song.absolute_time > time_lerp_start_time) {
-      f64 t = (song.absolute_time - time_lerp_start_time) / time_lerp_duration;
-      song.time_scale = cerp(1., .0, min(t, 1.));
+    const f64 time_since_start =
+      song.time_state.get_absolute_time() - time_lerp_start_time;
+    if (time_since_start > 0) {
+      f64 t = time_since_start / time_lerp_duration;
+      song.time_state.set_time_scale(cerp(1., .0, min(t, 1.)));
     }
 
     // Clamp amplitude
@@ -557,13 +559,13 @@ FMOD_RESULT F_CALLBACK pcmsetposcallback(
 
 s32 main()
 {
-  Test test;
-  test.test();
-  return 0;
-}
+  //   Test test;
+  //   test.test();
+  //   return 0;
+  // }
 
-s32 main2()
-{
+  // s32 main2()
+  // {
   int seed = 0;
   std::cout << "Please input a seed:";
   std::cin >> seed;
@@ -648,9 +650,6 @@ s32 main2()
   {
     song.bpm = 130.;
     song.instrument_instances = instrument_instances;
-    song.time_scale = 1.;
-    song.time = .0;
-    song.absolute_time = .0;
   }
 
   // Init FMOD
@@ -708,7 +707,7 @@ s32 main2()
   f64 dt, prev_elapsed, elapsed = .0;
 
   bool isPlaying = true;
-  while (isPlaying && song.time_scale > DBL_EPSILON) {
+  while (isPlaying && song.time_state.get_time_scale() > DBL_EPSILON) {
     // time
     {
       t = std::chrono::high_resolution_clock::now();

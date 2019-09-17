@@ -15,6 +15,7 @@ ColumnLimit: 80
 ContinuationIndentWidth: 2
 DerivePointerAlignment: false
 IncludeBlocks: Preserve
+IndentCaseLabels: true
 IndentPPDirectives: AfterHash
 PointerAlignment: Left
 ReflowComments: true

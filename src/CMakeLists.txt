@@ -5,7 +5,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(INCL_DIRS ${FMOD_DIR}/inc)
 
 include_directories(${INCL_DIRS} ${CMAKE_SOURCE_DIR}/src)
-file(GLOB_RECURSE SOURCES
+file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS
     ${CMAKE_SOURCE_DIR}/src/*.hpp
     ${CMAKE_SOURCE_DIR}/src/*.cpp
 )

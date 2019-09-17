@@ -62,24 +62,45 @@ inline const f64 interpolate(
   const Interpolation interpolation) noexcept
 {
   switch (interpolation) {
-  case Interpolation::None:
-    return b;
-  case Interpolation::Linear:
-    return clamp(a, b, lerp(a, b, t));
-  case Interpolation::Cosine:
-    return clamp(a, b, cerp(a, b, t));
-  default:
-    throw "unsupported Interpolation";
+    case Interpolation::None:
+      return b;
+    case Interpolation::Linear:
+      return clamp(a, b, lerp(a, b, t));
+    case Interpolation::Cosine:
+      return clamp(a, b, cerp(a, b, t));
+    default:
+      throw "unsupported Interpolation";
   }
 }
 
-// inline f64 lerp_array(f64 *values, u32 size, f64 t)
-// {
-//   f64 ixf = t * size;
-//   u32 ix = u32(ixf);
-//   u32 max_ix = size - 1;
-//   return lerp(values[min(ix, max_ix)], values[min(ix + 1, max_ix)], ixf -
-//   ix);
-// }
+class TimeState;
+
+class Interpolated {
+public:
+  Interpolated();
+  Interpolated(const f64 value);
+
+  // NOTE: takes a Timing in order to uphold the invariant that interpolation
+  // must start at call time.
+  void set(
+    const f64 target_value,
+    const TimeState& timing,
+    const f64 interpolation_duration,
+    const Interpolation interpolation) noexcept;
+
+  // NOTE: this could be unconstrained to take `const f64 time` instead, but we
+  // are delaying that decision until confirmed necessary
+  const f64 get(const TimeState& timing) const noexcept;
+  const f64 get_target_value() const noexcept;
+
+private:
+  f64 target_value = .0;
+  f64 prev_value = .0;
+  // TODO (feat): type safety - measure in seconds
+  f64 start_time = .0;
+  // TODO (feat): type safety - measure in seconds
+  f64 interpolation_duration = .0;
+  Interpolation interpolation = Interpolation::None;
+};
 
 #endif

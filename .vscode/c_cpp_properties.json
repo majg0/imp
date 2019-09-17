@@ -10,6 +10,7 @@
                 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.14.sdk/System/Library/Frameworks"
             ],
             "compilerPath": "/usr/bin/clang",
+            "cppStandard": "c++17",
             "intelliSenseMode": "clang-x64",
             "configurationProvider": "vector-of-bool.cmake-tools"
         }
