@@ -559,13 +559,13 @@ FMOD_RESULT F_CALLBACK pcmsetposcallback(
 
 s32 main()
 {
-  //   Test test;
-  //   test.test();
-  //   return 0;
-  // }
+  Test test;
+  test.test();
+  return 0;
+}
 
-  // s32 main2()
-  // {
+s32 main2()
+{
   int seed = 0;
   std::cout << "Please input a seed:";
   std::cin >> seed;
