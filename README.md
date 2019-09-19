@@ -13,11 +13,24 @@
 
 Now you can run it at `../bin/imp`
 
+## Design Goals
+
+Note: this is still in very early development and most design goals are not yet upheld.
+
+- no heap allocations, or a single one up front
+- performant enough but not crazy optimized
+- stand alone - only dependency should be on the operating system
+- tight design - tight abstractions on top of well-informed decisions
+- make proper use of latest C++ language and STL features
+- tests to help uphold invariants and avoid regressions
+- configurable during runtime
+- easily consumable as a library from multiple languages, with good documentation
+
 ## Milestones
 
 1. Proof of concept
-    - [x] basic design
-    - [x] cross compilation
+    - [x] project setup and cross compilation
+    - [x] make some sound
 1. Find the right abstractions
     - [ ] synth
     - [ ] composition

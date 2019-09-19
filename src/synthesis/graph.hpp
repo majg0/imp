@@ -42,6 +42,25 @@ private:
   Interpolated frequency = .0;
 };
 
+struct GainRecord {
+  void set_gain(
+    const f64 target_value,
+    const TimeState& time_state,
+    const f64 interpolation_duration,
+    const Interpolation interpolation)
+  {
+    gain.set(target_value, time_state, interpolation_duration, interpolation);
+  }
+
+  const f64 sample(const TimeState& time_state, const f64 amplitude) const
+  {
+    return gain.get(time_state) * amplitude;
+  }
+
+private:
+  Interpolated gain = 1.;
+};
+
 #include <algorithm> // lower_bound
 #include <cstring>   // memcpy
 #include <optional>  // optional
@@ -229,63 +248,163 @@ private:
   Range ranges[MAX_NUM_RANGES] = {0};
 };
 
-class Database;
+class ECS;
 
-// class ID {
-// public:
-//   // TODO: how to establish invariant that ID may not outlive graph?
-//   ID(Graph2& graph, const size_t index) : graph(graph), index(index) {}
-//   ~ID();
-
-// private:
-//   Graph2& graph;
-//   size_t index = 0;
-// };
-
-class Database {
+class ID {
 public:
-  static constexpr size_t SIZE = 1024;
-  Ranges<SIZE> remaining = Ranges<SIZE>::full();
-  Ranges<SIZE> used = Ranges<SIZE>::empty();
+  ID() : ecs(nullptr), index(0) {}
 
-  // const ID get_id()
-  // {
-  //   auto [success, index] = ranges.take_first();
-  //   if (!success) {
-  //     throw "no more space in graph";
-  //   }
-  // }
+  ID(ECS* ecs, const size_t index);
 
-  template <typename T>
-  const T get_record(const size_t id);
+  ID(const ID& other);
+
+  ID(ID&& other) : ecs(nullptr), index(0) { *this = std::move(other); }
+
+  ~ID();
+
+  ID& operator=(ID&& other)
+  {
+    if (this != &other) {
+      this->ecs = other.ecs;
+      this->index = other.index;
+      other.ecs = nullptr;
+      other.index = 0;
+    }
+    return *this;
+  }
+
+  size_t value() const { return index; }
+
+  void debug_print() const;
 
 private:
-  PhaseRecord phase_records[SIZE]{};
-  SineRecord sine_records[SIZE]{};
+  ECS* ecs;
+  size_t index = 0;
 };
 
-// ID : ~ID()
-// {
-//   graph.ranges.leave(index);
-// }
+// NOTE: ideally, if an entity only uses one component, it shouldn't hog a slot
+// of storage for all other components too - but by doing so we ensure a maximum
+// memory footprint of the ECS system, which is a good thing. If an entity needs
+// several components of the same type, it will have to use several IDs.
+class ECS {
+public:
+  // ensure static memory footprint
+  static constexpr size_t SIZE = 512;
 
-template <>
-const PhaseRecord Database::get_record(const size_t id)
+  // ensure fast acquiry of free ids
+  Ranges<SIZE> available = Ranges<SIZE>::full();
+
+  // factory function to encapsulate resource management
+  template <typename T>
+  T create_model()
+  {
+    return T(*this);
+  }
+
+  ID acquire_id()
+  {
+    if (auto index = available.take_first()) {
+      return ID(this, *index);
+    }
+    throw "out of ids";
+  }
+  u8 num_references(const size_t index) { return reference_counts[index]; }
+  void reference_index(const size_t index) { ++reference_counts[index]; }
+  void unreference_index(const size_t index)
+  {
+    if (--reference_counts[index] == 0) {
+      available.leave(index);
+    }
+  }
+
+  template <typename T>
+  T get_record(const ID& id);
+
+private:
+  u8 reference_counts[SIZE]{};
+  PhaseRecord phase_records[SIZE]{};
+  SineRecord sine_records[SIZE]{};
+  GainRecord gain_records[SIZE]{};
+};
+
+ID::ID(ECS* ecs, const size_t index) : ecs(ecs), index(index)
 {
-  return phase_records[id];
+  ecs->reference_index(index);
+}
+
+ID::ID(const ID& other) : ecs(other.ecs), index(other.index)
+{
+  ecs->reference_index(index);
+}
+
+ID::~ID()
+{
+  if (ecs != nullptr) {
+    ecs->unreference_index(index);
+    return;
+  }
+  ecs = nullptr;
+}
+
+void ID::debug_print() const
+{
+  if (ecs != nullptr) {
+    std::cout << "ID{" << index << ":" << (int)ecs->num_references(index) << "}"
+              << std::endl;
+    return;
+  }
+  std::cout << "ID{null}" << std::endl;
 }
 
 template <>
-const SineRecord Database::get_record(const size_t id)
+PhaseRecord ECS::get_record(const ID& id)
 {
-  return sine_records[id];
+  return phase_records[id.value()];
 }
+
+template <>
+SineRecord ECS::get_record(const ID& id)
+{
+  return sine_records[id.value()];
+}
+
+struct Model {
+  ID id;
+  PhaseRecord phase;
+
+  Model() noexcept {}
+  Model(ECS& ecs) noexcept
+      : id(ecs.acquire_id()), phase(ecs.get_record<PhaseRecord>(this->id))
+  {
+  }
+};
 
 class Test {
 public:
   void test()
   {
-    Database db;
+    ECS ecs;
+    // Model m;
+
+    dbg(ecs.available);
+
+    Model m;
+    dbg(m.id);
+    {
+      m = ecs.create_model<Model>();
+      dbg(m.id);
+      {
+        auto id = m.id;
+        dbg(m.id);
+      }
+      dbg(m.id);
+      auto m2 = ecs.create_model<Model>();
+      dbg(m2.id);
+      dbg(ecs.available);
+    }
+    dbg(m.id);
+
+    dbg(ecs.available);
 
     // auto context = Context();
     // auto& osc = context.oscillator.create(441.);
