@@ -17,6 +17,7 @@ DerivePointerAlignment: false
 IncludeBlocks: Preserve
 IndentCaseLabels: true
 IndentPPDirectives: AfterHash
+NamespaceIndentation: All
 PointerAlignment: Left
 ReflowComments: true
 TabWidth: 2

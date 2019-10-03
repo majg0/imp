@@ -9,7 +9,7 @@
 #include <map>
 #include <vector>
 
-struct PhaseRecord {
+struct PhaseComponent {
   void on_tick(const TimeState& time_state)
   {
     phase += time_state.get_scaled_delta_time();
@@ -21,7 +21,7 @@ struct PhaseRecord {
   f64 phase = .0;
 };
 
-struct SineRecord {
+struct FrequencyComponent {
   void set_frequency(
     const f64 target_value,
     const TimeState& time_state,
@@ -42,7 +42,7 @@ private:
   Interpolated frequency = .0;
 };
 
-struct GainRecord {
+struct GainComponent {
   void set_gain(
     const f64 target_value,
     const TimeState& time_state,
@@ -59,6 +59,10 @@ struct GainRecord {
 
 private:
   Interpolated gain = 1.;
+};
+
+struct WavetableComponent {
+  const HarmonicsWavetable* wavetable = nullptr;
 };
 
 #include <algorithm> // lower_bound
@@ -282,6 +286,10 @@ private:
   size_t index = 0;
 };
 
+// TODO: let each component storage handle ref counts and let each model use an
+// ID per component. That way they are not deterministic but could be stored
+// along models... think about it?
+
 // NOTE: ideally, if an entity only uses one component, it shouldn't hog a slot
 // of storage for all other components too - but by doing so we ensure a maximum
 // memory footprint of the ECS system, which is a good thing. If an entity needs
@@ -293,13 +301,6 @@ public:
 
   // ensure fast acquiry of free ids
   Ranges<SIZE> available = Ranges<SIZE>::full();
-
-  // factory function to encapsulate resource management
-  template <typename T>
-  T create_model()
-  {
-    return T(*this);
-  }
 
   ID acquire_id()
   {
@@ -318,13 +319,14 @@ public:
   }
 
   template <typename T>
-  T get_record(const ID& id);
+  T get_component(const ID& id);
 
 private:
   u8 reference_counts[SIZE]{};
-  PhaseRecord phase_records[SIZE]{};
-  SineRecord sine_records[SIZE]{};
-  GainRecord gain_records[SIZE]{};
+  GainComponent gain_components[SIZE]{};
+  PhaseComponent phase_components[SIZE]{};
+  // SineComponent sine_components[SIZE]{};
+  WavetableComponent wavetable_components[SIZE]{};
 };
 
 ID::ID(ECS* ecs, const size_t index) : ecs(ecs), index(index)
@@ -357,54 +359,55 @@ void ID::debug_print() const
 }
 
 template <>
-PhaseRecord ECS::get_record(const ID& id)
+GainComponent ECS::get_component(const ID& id)
 {
-  return phase_records[id.value()];
+  return gain_components[id.value()];
 }
 
 template <>
-SineRecord ECS::get_record(const ID& id)
+PhaseComponent ECS::get_component(const ID& id)
 {
-  return sine_records[id.value()];
+  return phase_components[id.value()];
 }
 
-struct Model {
-  ID id;
-  PhaseRecord phase;
+// template <>
+// FrequencyComponent ECS::get_component(const ID& id)
+// {
+//   return frequency_components[id.value()];
+// }
 
-  Model() noexcept {}
-  Model(ECS& ecs) noexcept
-      : id(ecs.acquire_id()), phase(ecs.get_record<PhaseRecord>(this->id))
-  {
-  }
-};
+template <>
+WavetableComponent ECS::get_component(const ID& id)
+{
+  return wavetable_components[id.value()];
+}
+
+// struct Voice {
+//   ID id;
+//   ID synthId;
+//   GainComponent gain;
+//   PhaseComponent phase;
+//   WavetableComponent wavetable;
+
+//   Voice() noexcept {}
+//   Voice(ECS& ecs, ID synthId) noexcept
+//       : id(ecs.acquire_id()), synthId(synthId),
+//         gain(ecs.get_component<GainComponent>(this->id)),
+//         phase(ecs.get_component<PhaseComponent>(this->id)),
+//         wavetable(ecs.get_component<WavetableComponent>(this->synthId))
+//   {
+//   }
+// };
 
 class Test {
 public:
   void test()
   {
     ECS ecs;
-    // Model m;
-
-    dbg(ecs.available);
-
-    Model m;
-    dbg(m.id);
-    {
-      m = ecs.create_model<Model>();
-      dbg(m.id);
-      {
-        auto id = m.id;
-        dbg(m.id);
-      }
-      dbg(m.id);
-      auto m2 = ecs.create_model<Model>();
-      dbg(m2.id);
-      dbg(ecs.available);
-    }
-    dbg(m.id);
-
-    dbg(ecs.available);
+    ID synthId = ecs.acquire_id();
+    HarmonicsWavetable wavetable = {1.};
+    // ecs.get_component<WavetableComponent>(synthId).wavetable = &wavetable;
+    // Voice m = Voice(ecs, synthId);
 
     // auto context = Context();
     // auto& osc = context.oscillator.create(441.);

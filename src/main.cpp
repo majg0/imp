@@ -1,6 +1,7 @@
 #include "composition/circular_rw_buffer.hpp"
 #include "constants.hpp"
-#include "synthesis/graph.hpp"
+// #include "synthesis/graph.hpp"
+#include "ecs.hpp"
 #include "synthesis/synth.hpp"
 #include "synthesis/voice.hpp"
 #include "synthesis/wavetable.hpp"
@@ -29,7 +30,7 @@
 // General Defines ////////////////////////////////////////////////////////////
 
 #define FMODERRCHECK(_result) FMODERRCHECK_fn(_result, __FILE__, __LINE__)
-void FMODERRCHECK_fn(FMOD_RESULT result, const char* file, s32 line)
+void FMODERRCHECK_fn(FMOD_RESULT result, const char* file, i32 line)
 {
   if (result != FMOD_OK) {
     printf(
@@ -42,7 +43,7 @@ void FMODERRCHECK_fn(FMOD_RESULT result, const char* file, s32 line)
 }
 #define FMODSOUNDERRCHECK(_result) \
   FMODSOUNDERRCHECK_fn(_result, __FILE__, __LINE__)
-void FMODSOUNDERRCHECK_fn(FMOD_RESULT result, const char* file, s32 line)
+void FMODSOUNDERRCHECK_fn(FMOD_RESULT result, const char* file, i32 line)
 {
   if (result != FMOD_OK && result != FMOD_ERR_INVALID_HANDLE) {
     printf(
@@ -304,12 +305,12 @@ inline u8 imp_note(IMP_NOTE note, IMP_OCTAVE octave)
 /// offsets -3 -1 +1
 /// returns 1
 inline bool
-scale_rel_ix(imp_scale scale, u8 scale_root, u8 note, u8* scale_ix, s8* offset)
+scale_rel_ix(imp_scale scale, u8 scale_root, u8 note, u8* scale_ix, i8* offset)
 {
-  s8 scale_note = (note + 12 - scale_root) % 12;
+  i8 scale_note = (note + 12 - scale_root) % 12;
   *offset = 100; // init with unreasonably high offset
   for (u32 i = 0; i != scale.size; ++i) {
-    s8 curr_offset = s8(scale.ixs[i]) - scale_note;
+    i8 curr_offset = i8(scale.ixs[i]) - scale_note;
     if (curr_offset == 0) {
       *offset = 0;
       *scale_ix = i;
@@ -335,7 +336,7 @@ inline u8 scale_descend(imp_scale scale, u8 scale_root, u8 origin)
     return origin + scale.ixs[last_index] - 12 - root_rel; // TODO bound
   }
 
-  for (s32 i = last_index; i >= 0; --i) {
+  for (i32 i = last_index; i >= 0; --i) {
     if (scale.ixs[i] < root_rel) {
       return origin + scale.ixs[i] - root_rel; // TODO bound
     }
@@ -380,7 +381,7 @@ pcmreadcallback(FMOD_SOUND* sound, void* data, u32 datalen)
   imp_song& song = *song_ptr;
 
   // Fill sound buffer
-  s16* stereo16bitbuffer = static_cast<s16*>(data);
+  i16* stereo16bitbuffer = static_cast<i16*>(data);
   for (u32 count = 0; count < (datalen >> 2);
        count++) // >>2 = 4 bytes per sample (16bit stereo)
   {
@@ -538,7 +539,7 @@ pcmreadcallback(FMOD_SOUND* sound, void* data, u32 datalen)
     }
 
     // Write channel data
-    s16 val = s16(amplitude_sum * 32767.);
+    i16 val = i16(amplitude_sum * 32767.);
     *stereo16bitbuffer++ = val; // left channel
     *stereo16bitbuffer++ = val; // right channel
   }
@@ -548,7 +549,7 @@ pcmreadcallback(FMOD_SOUND* sound, void* data, u32 datalen)
 
 FMOD_RESULT F_CALLBACK pcmsetposcallback(
   FMOD_SOUND* /*sound*/,
-  s32 /*subsound*/,
+  i32 /*subsound*/,
   u32 /*position*/,
   FMOD_TIMEUNIT /*postype*/)
 {
@@ -557,14 +558,14 @@ FMOD_RESULT F_CALLBACK pcmsetposcallback(
   return FMOD_OK;
 }
 
-s32 main()
+i32 main()
 {
   Test test;
   test.test();
   return 0;
 }
 
-s32 main2()
+i32 main2()
 {
   int seed = 0;
   std::cout << "Please input a seed:";
@@ -585,7 +586,7 @@ s32 main2()
 
   // Setup synths
   Synth synths[IMP_NUM_SYNTHS] = {0};
-  for (s32 i = 0; i != IMP_NUM_SYNTHS; ++i) {
+  for (i32 i = 0; i != IMP_NUM_SYNTHS; ++i) {
     synths[i].wavetable = violin_wavetable;
     synths[i].adsr_params.attack_duration = .068;
     synths[i].adsr_params.decay_duration = .014;
@@ -637,7 +638,7 @@ s32 main2()
   // Setup instrument instances
   imp_instrument_instance instrument_instances[IMP_NUM_INSTRUMENT_INSTANCES] = {
     0};
-  for (s32 i = 0; i != 4; ++i) {
+  for (i32 i = 0; i != 4; ++i) {
     instrument_instances[i].active = true;
     instrument_instances[i].e_countdown = 0;
     instrument_instances[i].synth = &synths[i % IMP_NUM_SYNTHS];
@@ -673,7 +674,7 @@ s32 main2()
       2048; /* Chunk size of stream update in samples. This will be the
                amount of data passed to the user callback. */
     exinfo.length = exinfo.defaultfrequency * exinfo.numchannels *
-      sizeof(s16); /* Length of PCM data in bytes of whole song (for
+      sizeof(i16); /* Length of PCM data in bytes of whole song (for
                       Sound::getLength) */
     exinfo.format = FMOD_SOUND_FORMAT_PCM16;  /* Data format of sound. */
     exinfo.pcmreadcallback = pcmreadcallback; /* User callback for reading. */
