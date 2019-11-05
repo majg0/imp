@@ -311,6 +311,23 @@ struct PrintSystem {
 };
 
 struct Test {
+  void test2()
+  {
+    struct Store {
+      ComponentStorage<AB> abReg;
+      ComponentStorage<int> intReg;
+      ComponentStorage<float> floatReg;
+    } store;
+
+    const id = IdFactory::create();
+    store.abReg
+
+    // for (auto ab : abStorage)
+    // {
+    //   intStorage.emplace_component(ab.a + ab.b);
+    // }
+  }
+
   void test()
   {
     ECS ecs = ECSBuilder::with_components<AB, int, float>()

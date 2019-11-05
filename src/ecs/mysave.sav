@@ -1,0 +1,164 @@
+{
+  "action_names": {
+    "action": [
+      "Quit",
+      "NextTurn"
+    ],
+    "localized": [
+      0,
+      1
+    ]
+  },
+  "dwarf_ai_controlled": {
+    "entity": [
+      0
+    ]
+  },
+  "hands": {
+    "entity": [
+      0
+    ],
+    "left": [
+      null
+    ],
+    "right": [
+      null
+    ]
+  },
+  "locale": 0,
+  "locales": {
+    "id": [
+      0,
+      1
+    ],
+    "name": [
+      "en_US",
+      "sv_SE"
+    ]
+  },
+  "localizeds": {
+    "id": [
+      0,
+      1,
+      0,
+      1
+    ],
+    "locale": [
+      0,
+      0,
+      1,
+      1
+    ],
+    "string": [
+      "quit",
+      "next turn",
+      "avsluta",
+      "nästa tur"
+    ]
+  },
+  "positions": {
+    "entity": [
+      0
+    ],
+    "x": [
+      0.0
+    ],
+    "y": [
+      0.0
+    ]
+  },
+  "chunk": {
+    "grid": [
+      [
+        "Empty",
+        "Empty",
+        "Empty",
+        "Empty",
+        "Empty",
+        "Filled",
+        "Empty",
+        "Empty"
+      ],
+      [
+        "Empty",
+        "Empty",
+        "Empty",
+        "Empty",
+        "Empty",
+        "Empty",
+        "Empty",
+        "Empty"
+      ],
+      [
+        "Empty",
+        "Empty",
+        "Empty",
+        "Empty",
+        "Empty",
+        "Filled",
+        "Empty",
+        "Empty"
+      ],
+      [
+        "Filled",
+        "Empty",
+        "Filled",
+        "Empty",
+        "Empty",
+        "Filled",
+        "Empty",
+        "Empty"
+      ],
+      [
+        "Empty",
+        "Empty",
+        "Empty",
+        "Empty",
+        "Empty",
+        "Empty",
+        "Empty",
+        "Empty"
+      ],
+      [
+        "Empty",
+        "Empty",
+        "Empty",
+        "Empty",
+        "Empty",
+        "Empty",
+        "Empty",
+        "Empty"
+      ],
+      [
+        "Empty",
+        "Empty",
+        "Empty",
+        "Empty",
+        "Empty",
+        "Empty",
+        "Empty",
+        "Empty"
+      ],
+      [
+        "Empty",
+        "Filled",
+        "Empty",
+        "Empty",
+        "Empty",
+        "Empty",
+        "Empty",
+        "Empty"
+      ]
+    ]
+  },
+  "void_stdin_bindings": {
+    "input": [
+      "q",
+      "n"
+    ],
+    "action": [
+      "Quit",
+      "NextTurn"
+    ]
+  }
+}
